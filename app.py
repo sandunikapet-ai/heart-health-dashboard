@@ -28,6 +28,23 @@ with st.expander("What do these terms mean?"):
 model = joblib.load('model_ebm.pkl')
 X_train = pd.read_csv('X_train.csv')
 
+st.markdown("""
+<style>
+div.stButton > button {
+    background-color: white;
+    color: black;
+    font-weight: bold;
+    border: 3px solid #4A9EFF;
+    padding: 12px;
+}
+div.stButton > button:hover {
+    background-color: #f0f0f0;
+    color: black;
+    border: 3px solid #F39C12;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.write("---")
 
 GREEN = '#27AE60'
