@@ -396,17 +396,26 @@ if get_result:
         'BMI_healthy': "Your BMI is within the healthy range (18.5-24.9).",
     }
 
-    risk_factors = []
+    candidate_with_impact = []
     for feature in candidate_risks:
         if feature == 'BMI_high':
-            risk_factors.append((feature, None))
+            candidate_with_impact.append((feature, None, 999))
             continue
         changed_row = person_row.copy()
         changed_row[feature] = 1.0 if feature in ['PhysActivity', 'Fruits', 'Veggies'] else 0.0
         changed_data = pd.DataFrame([changed_row])[X_train.columns]
         changed_proba = model.predict_proba(changed_data)[0][1]
-        if likelihood - changed_proba >= 0.01:
-            risk_factors.append((feature, changed_proba))
+        impact = likelihood - changed_proba
+        candidate_with_impact.append((feature, changed_proba, impact))
+
+    candidate_with_impact.sort(key=lambda x: x[2], reverse=True)
+
+    risk_factors = []
+    if candidate_with_impact:
+        risk_factors.append((candidate_with_impact[0][0], candidate_with_impact[0][1]))
+        for feature, changed_proba, impact in candidate_with_impact[1:]:
+            if impact >= 0.01 and len(risk_factors) < 2:
+                risk_factors.append((feature, changed_proba))
 
     temp_dir = tempfile.mkdtemp()
     gauge_path = os.path.join(temp_dir, 'gauge.png')
