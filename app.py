@@ -92,7 +92,7 @@ with main_left:
             "In your entire life, have you smoked at least 100 cigarettes (about 5 packs)? This includes past smoking, even if you've since quit.",
             ["No", "Yes"]
         )
-        phys_activity = st.radio("Physical activity in the past 30 days?", ["No", "Yes"])
+        activity_days_per_week = st.number_input("How many days per week do you do physical activity (outside of your regular job)?", min_value=0, max_value=7, value=0)
         fruits = st.radio("Eat fruit 1+ times per day?", ["No", "Yes"])
         veggies = st.radio("Eat vegetables 1+ times per day?", ["No", "Yes"])
         drinks_per_week = st.number_input("On average, how many alcoholic drinks do you have per week?", min_value=0, max_value=100, value=0)
@@ -100,9 +100,25 @@ with main_left:
     with st.container(border=True):
         st.subheader("Step 4: Body Measurements")
         height_cm = st.number_input("Height (cm)", min_value=100, max_value=250, value=170)
+        height_inches = height_cm / 2.54
+        st.caption(f"≈ {height_inches:.1f} inches ({int(height_inches // 12)} ft {height_inches % 12:.0f} in)")
+
         weight_kg = st.number_input("Weight (kg)", min_value=30, max_value=250, value=70)
+        weight_lb = weight_kg * 2.20462
+        st.caption(f"≈ {weight_lb:.1f} lb")
+
         bmi_calculated = weight_kg / ((height_cm / 100) ** 2)
         st.write(f"Your calculated BMI: **{bmi_calculated:.1f}**")
+
+    with st.container(border=True):
+        st.subheader("Step 5: Additional Health Information")
+        st.caption("These are also used by the model and directly affect the accuracy of your result.")
+        gen_health = st.selectbox("How would you rate your general health?", ["Excellent", "Very good", "Good", "Fair", "Poor"])
+        ment_hlth_days = st.number_input("In the past 30 days, how many days was your mental health not good?", min_value=0, max_value=30, value=0)
+        phys_hlth_days = st.number_input("In the past 30 days, how many days was your physical health not good?", min_value=0, max_value=30, value=0)
+        diff_walk = st.radio("Do you have serious difficulty walking or climbing stairs?", ["No", "Yes"])
+        any_healthcare = st.radio("Do you have any form of health care coverage?", ["Yes", "No"])
+        no_doc_cost = st.radio("In the past 12 months, was there a time you needed to see a doctor but couldn't because of cost?", ["No", "Yes"])
 
     get_result = st.button("Get My Result", use_container_width=True)
     left_result_placeholder = st.container()
@@ -113,6 +129,7 @@ with main_right:
 
     with st.container(border=True):
         hvy_alcohol_live = (drinks_per_week > 14) if sex == "Male" else (drinks_per_week > 7)
+        phys_activity_live = activity_days_per_week > 0
 
         snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
         snapshot_values = [
@@ -120,7 +137,7 @@ with main_right:
             1 if high_chol == "Yes" else 0,
             1 if stroke == "Yes" else 0,
             1 if smoker == "Yes" else 0,
-            1 if phys_activity == "Yes" else 0,
+            1 if phys_activity_live else 0,
             1 if fruits == "Yes" else 0,
             1 if veggies == "Yes" else 0,
             1 if hvy_alcohol_live else 0,
@@ -149,6 +166,17 @@ with main_right:
         bmi_color = "green" if 18.5 <= bmi_calculated <= 24.9 else "orange"
         st.markdown(f"BMI: **{bmi_calculated:.1f}** — :{bmi_color}[{bmi_status}]")
 
+        st.write("---")
+        st.markdown("**Your Healthy Margins**")
+        smoking_margin_text = "0 cigarettes lifetime is the only fully risk-free level - any smoking history counts."
+        if sex == "Male":
+            alcohol_margin_text = "Under 14 drinks/week (men) is the healthy margin used in this model."
+        else:
+            alcohol_margin_text = "Under 7 drinks/week (women) is the healthy margin used in this model."
+        st.caption(f"🚬 {smoking_margin_text}")
+        st.caption(f"🍷 {alcohol_margin_text}")
+        st.caption("🏃 CDC/WHO recommend 150 min/week of moderate activity (≈30 min, 5 days/week) for genuine health benefit - this model's 'active' question is a lower bar (any activity at all).")
+
     right_result_placeholder = st.container()
 
 if get_result:
@@ -156,6 +184,10 @@ if get_result:
         hvy_alcohol = "Yes" if drinks_per_week > 14 else "No"
     else:
         hvy_alcohol = "Yes" if drinks_per_week > 7 else "No"
+    phys_activity = "Yes" if activity_days_per_week > 0 else "No"
+
+    gen_health_map = {"Excellent": 1, "Very good": 2, "Good": 3, "Fair": 4, "Poor": 5}
+    gen_health_value = gen_health_map[gen_health]
 
     defaults = X_train.mean()
     person_row = defaults.copy()
@@ -177,6 +209,13 @@ if get_result:
     person_row['Veggies'] = 1.0 if veggies == "Yes" else 0.0
     person_row['HvyAlcoholConsump'] = 1.0 if hvy_alcohol == "Yes" else 0.0
     person_row['BMI'] = bmi_calculated
+
+    person_row['GenHlth'] = gen_health_value
+    person_row['MentHlth'] = ment_hlth_days
+    person_row['PhysHlth'] = phys_hlth_days
+    person_row['DiffWalk'] = 1.0 if diff_walk == "Yes" else 0.0
+    person_row['AnyHealthcare'] = 1.0 if any_healthcare == "Yes" else 0.0
+    person_row['NoDocbcCost'] = 1.0 if no_doc_cost == "Yes" else 0.0
 
     education_map = {"None or only kindergarten":1, "Grades 1-8":2, "Grades 9-11":3,
                       "Grade 12 or GED":4, "Some college (1-3 years)":5, "College graduate (4+ years)":6}
@@ -406,6 +445,27 @@ if get_result:
         'BMI_healthy': "Your BMI is within the healthy range (18.5-24.9).",
     }
 
+    SUPPORTIVE_MESSAGES = {
+        'GenHlth': "Your self-rated general health is one of the factors linked to this result. If you haven't discussed your overall wellbeing with your GP recently, it may be worth raising.",
+        'MentHlth': "The number of recent days your mental health hasn't been great is a factor here. If this has been ongoing, it's worth mentioning to your GP.",
+        'PhysHlth': "The number of recent days your physical health hasn't been great is a factor here. If this has been ongoing, it's worth mentioning to your GP.",
+        'Stroke': "A history of stroke is a factor in this result. Ongoing management with your healthcare provider is the appropriate path here, rather than a lifestyle change.",
+        'Diabetes': "Diabetes status is a factor in this result. Ongoing management with your healthcare provider is the appropriate path here, rather than a lifestyle change.",
+        'DiffWalk': "Difficulty walking or climbing stairs is a factor in this result. Since this can have many different causes, it's best discussed directly with your GP.",
+        'CholCheck': "You haven't had a cholesterol check in the past 5 years. Heart Foundation NZ recommends getting this checked, especially from age 45 onward.",
+        'NoDocbcCost': "It looks like cost may have been a barrier to seeing a doctor recently. Community health services and budget GP options may be available in your area - Healthline NZ (0800 611 116) can help you find local options.",
+    }
+
+    supportive_notes = []
+    if chol_check == "No": supportive_notes.append(SUPPORTIVE_MESSAGES['CholCheck'])
+    if no_doc_cost == "Yes": supportive_notes.append(SUPPORTIVE_MESSAGES['NoDocbcCost'])
+    if stroke == "Yes": supportive_notes.append(SUPPORTIVE_MESSAGES['Stroke'])
+    if diabetes != "No": supportive_notes.append(SUPPORTIVE_MESSAGES['Diabetes'])
+    if diff_walk == "Yes": supportive_notes.append(SUPPORTIVE_MESSAGES['DiffWalk'])
+    if gen_health_value >= 4: supportive_notes.append(SUPPORTIVE_MESSAGES['GenHlth'])
+    if ment_hlth_days >= 14: supportive_notes.append(SUPPORTIVE_MESSAGES['MentHlth'])
+    if phys_hlth_days >= 14: supportive_notes.append(SUPPORTIVE_MESSAGES['PhysHlth'])
+
     candidate_with_impact = []
     for feature in candidate_risks:
         if feature == 'BMI_high':
@@ -444,6 +504,7 @@ if get_result:
 
     st.session_state['risk_factors'] = risk_factors
     st.session_state['good_factors'] = good_factors
+    st.session_state['supportive_notes'] = supportive_notes
     st.session_state['likelihood'] = likelihood
     st.session_state['percentile'] = percentile
     st.session_state['RECOMMENDATION_LIBRARY'] = RECOMMENDATION_LIBRARY
@@ -458,6 +519,7 @@ if st.session_state.get('show_results'):
     st.write("---")
     risk_factors = st.session_state['risk_factors']
     good_factors = st.session_state['good_factors']
+    supportive_notes = st.session_state['supportive_notes']
     likelihood = st.session_state['likelihood']
     percentile = st.session_state['percentile']
     RECOMMENDATION_LIBRARY = st.session_state['RECOMMENDATION_LIBRARY']
@@ -480,6 +542,12 @@ if st.session_state.get('show_results'):
             for feature in good_factors:
                 st.write(f"- {POSITIVE_MESSAGES[feature]}")
 
+    def show_supportive_notes():
+        if supportive_notes:
+            st.subheader("📋 Worth Knowing")
+            for note in supportive_notes:
+                st.write(f"- {note}")
+
     if likelihood < 0.10:
         st.success("✅ Your result looks positive!")
         show_good_factors()
@@ -489,6 +557,8 @@ if st.session_state.get('show_results'):
     else:
         show_recommendations()
         show_good_factors()
+
+    show_supportive_notes()
 
     st.write("---")
     st.subheader("Download Your Summary")
