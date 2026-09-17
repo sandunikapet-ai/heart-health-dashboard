@@ -88,11 +88,14 @@ with main_left:
     with st.container(border=True):
         st.subheader("Step 3: Lifestyle")
         st.caption("These directly shape your recommendations, so please answer all.")
-        smoker = st.radio("Smoked at least 100 cigarettes in your lifetime?", ["No", "Yes"])
+        smoker = st.radio(
+            "In your entire life, have you smoked at least 100 cigarettes (about 5 packs)? This includes past smoking, even if you've since quit.",
+            ["No", "Yes"]
+        )
         phys_activity = st.radio("Physical activity in the past 30 days?", ["No", "Yes"])
         fruits = st.radio("Eat fruit 1+ times per day?", ["No", "Yes"])
         veggies = st.radio("Eat vegetables 1+ times per day?", ["No", "Yes"])
-        hvy_alcohol = st.radio("Heavy alcohol consumption?", ["No", "Yes"])
+        drinks_per_week = st.number_input("On average, how many alcoholic drinks do you have per week?", min_value=0, max_value=100, value=0)
 
     with st.container(border=True):
         st.subheader("Step 4: Body Measurements")
@@ -109,6 +112,8 @@ with main_right:
     st.caption("Updates instantly as you answer.")
 
     with st.container(border=True):
+        hvy_alcohol_live = (drinks_per_week > 14) if sex == "Male" else (drinks_per_week > 7)
+
         snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
         snapshot_values = [
             1 if high_bp == "Yes" else 0,
@@ -118,7 +123,7 @@ with main_right:
             1 if phys_activity == "Yes" else 0,
             1 if fruits == "Yes" else 0,
             1 if veggies == "Yes" else 0,
-            1 if hvy_alcohol == "Yes" else 0,
+            1 if hvy_alcohol_live else 0,
         ]
         protective_when_yes = {"Active", "Fruits", "Veggies"}
         snapshot_colors = []
@@ -147,6 +152,11 @@ with main_right:
     right_result_placeholder = st.container()
 
 if get_result:
+    if sex == "Male":
+        hvy_alcohol = "Yes" if drinks_per_week > 14 else "No"
+    else:
+        hvy_alcohol = "Yes" if drinks_per_week > 7 else "No"
+
     defaults = X_train.mean()
     person_row = defaults.copy()
 
@@ -377,18 +387,18 @@ if get_result:
     RECOMMENDATION_LIBRARY = {
         'PhysActivity': "Your activity level is a contributor to your result. The NZ Ministry of Health recommends at least 150 minutes of moderate-intensity activity per week for heart health.",
         'Smoker': "Smoking status is a contributor to your result. Quitline NZ (0800 778 778) provides free, confidential support. Blood pressure begins to fall within 20 minutes of quitting.",
-        'HvyAlcoholConsump': "Heavy alcohol consumption is a contributor to your result. NZ low-risk drinking guidelines recommend women have no more than 2 standard drinks a day (10/week) and men no more than 3 a day (15/week).",
+        'HvyAlcoholConsump': "Your reported alcohol intake is a contributor to your result. Try to stay under 14 drinks/week (men) or 7 drinks/week (women), the threshold used in this model. Source: NZ Health Promotion Agency.",
         'Fruits': "Fruit intake is a contributor to your result. The NZ '5+ A Day' guideline recommends at least 2 servings of fruit daily.",
         'Veggies': "Vegetable intake is a contributor to your result. The NZ '5+ A Day' guideline recommends at least 5 servings of vegetables daily.",
-        'HighBP': "Blood pressure is a contributor to your result. Heart Foundation NZ recommends: less than 5g salt per day, 150+ minutes of exercise weekly, limiting alcohol, and managing stress. Target: 120/80 mmHg or below.",
-        'HighChol': "Cholesterol is a contributor to your result. Heart Foundation NZ recommends swapping saturated fats for unsaturated fats, eating more fibre, and regular exercise. Target: total cholesterol below 5.5 mmol/L.",
+        'HighBP': "Blood pressure is a contributor to your result. Two things help most: eat less salt (under 5g/day, about 1 teaspoon), and stay active (150+ min/week). Target: 120/80 mmHg or below. Source: Heart Foundation NZ.",
+        'HighChol': "Cholesterol is a contributor to your result. Swap butter and fatty meat for nuts, olive oil, and oats. Target: under 5.5 mmol/L. Source: Heart Foundation NZ.",
         'BMI_high': "Your BMI is above the healthy range. Heart Foundation NZ notes a healthy BMI range is 18.5-24.9, best discussed with your GP alongside other factors.",
     }
 
     POSITIVE_MESSAGES = {
         'PhysActivity': "You're meeting the recommended activity level (150+ min/week). Keep it up.",
         'Smoker': "You don't smoke - one of the most protective things you can do for your heart.",
-        'HvyAlcoholConsump': "Your alcohol intake is within NZ low-risk guidelines.",
+        'HvyAlcoholConsump': "Your alcohol intake is within a healthy range for your sex.",
         'Fruits': "You're meeting the NZ '5+ A Day' fruit guideline (2+ servings daily).",
         'Veggies': "You're meeting the NZ '5+ A Day' vegetable guideline (5+ servings daily).",
         'HighBP': "Your blood pressure is working in your favour. Target is 120/80 mmHg or below.",
