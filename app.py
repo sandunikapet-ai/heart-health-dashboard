@@ -92,9 +92,33 @@ with main_left:
             "In your entire life, have you smoked at least 100 cigarettes (about 5 packs)? This includes past smoking, even if you've since quit.",
             ["No", "Yes"]
         )
+
         activity_days_per_week = st.number_input("How many days per week do you do physical activity (outside of your regular job)?", min_value=0, max_value=7, value=0)
-        fruits = st.radio("Eat fruit 1+ times per day?", ["No", "Yes"])
-        veggies = st.radio("Eat vegetables 1+ times per day?", ["No", "Yes"])
+        activity_minutes_per_day = st.number_input("On average, how many minutes per session?", min_value=0, max_value=180, value=0)
+        weekly_activity_minutes = activity_days_per_week * activity_minutes_per_day
+        if weekly_activity_minutes == 0:
+            activity_tier = "🔴 Low (Sedentary)"
+            activity_examples = "No regular activity - e.g. mostly sitting, no walking, gardening, or exercise."
+        elif weekly_activity_minutes < 150:
+            activity_tier = "🟡 Moderate"
+            activity_examples = "e.g. brisk walking, gardening, cycling, golf - below the CDC's 150 min/week target."
+        else:
+            activity_tier = "🟢 High"
+            activity_examples = "e.g. running, calisthenics, brisk walking/cycling most days - meets or exceeds the CDC's 150 min/week target."
+        st.caption(f"Your activity: **{weekly_activity_minutes} min/week** — {activity_tier}")
+        st.caption(activity_examples)
+        st.caption("CDC target: 150 min/week (e.g. 30 min, 5 days/week). Examples from the original BRFSS question: running, calisthenics, golf, gardening, walking for exercise.")
+
+        fruits_per_day = st.number_input("How many servings of fruit do you eat per day?", min_value=0, max_value=10, value=0)
+        fruits = "Yes" if fruits_per_day >= 1 else "No"
+        fruits_status = "🟢 Meets NZ '5+ A Day' target (2+/day)" if fruits_per_day >= 2 else ("🟡 Below target" if fruits_per_day >= 1 else "🔴 None reported")
+        st.caption(f"Fruit: {fruits_per_day}/day — {fruits_status}")
+
+        veggies_per_day = st.number_input("How many servings of vegetables do you eat per day?", min_value=0, max_value=10, value=0)
+        veggies = "Yes" if veggies_per_day >= 1 else "No"
+        veggies_status = "🟢 Meets NZ '5+ A Day' target (5+/day)" if veggies_per_day >= 5 else ("🟡 Below target" if veggies_per_day >= 1 else "🔴 None reported")
+        st.caption(f"Vegetables: {veggies_per_day}/day — {veggies_status}")
+
         drinks_per_week = st.number_input("On average, how many alcoholic drinks do you have per week?", min_value=0, max_value=100, value=0)
 
     with st.container(border=True):
@@ -129,7 +153,7 @@ with main_right:
 
     with st.container(border=True):
         hvy_alcohol_live = (drinks_per_week > 14) if sex == "Male" else (drinks_per_week > 7)
-        phys_activity_live = activity_days_per_week > 0
+        phys_activity_live = weekly_activity_minutes > 0
 
         snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
         snapshot_values = [
@@ -184,7 +208,7 @@ if get_result:
         hvy_alcohol = "Yes" if drinks_per_week > 14 else "No"
     else:
         hvy_alcohol = "Yes" if drinks_per_week > 7 else "No"
-    phys_activity = "Yes" if activity_days_per_week > 0 else "No"
+    phys_activity = "Yes" if weekly_activity_minutes > 0 else "No"
 
     gen_health_map = {"Excellent": 1, "Very good": 2, "Good": 3, "Fair": 4, "Poor": 5}
     gen_health_value = gen_health_map[gen_health]
