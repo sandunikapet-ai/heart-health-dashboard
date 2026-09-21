@@ -93,21 +93,12 @@ with main_left:
             ["No", "Yes"]
         )
 
-        activity_days_per_week = st.number_input("How many days per week do you do physical activity (outside of your regular job)?", min_value=0, max_value=7, value=0)
-        activity_minutes_per_day = st.number_input("On average, how many minutes per session?", min_value=0, max_value=180, value=0)
-        weekly_activity_minutes = activity_days_per_week * activity_minutes_per_day
-        if weekly_activity_minutes == 0:
-            activity_tier = "🔴 Low (Sedentary)"
-            activity_examples = "No regular activity - e.g. mostly sitting, no walking, gardening, or exercise."
-        elif weekly_activity_minutes < 150:
-            activity_tier = "🟡 Moderate"
-            activity_examples = "e.g. brisk walking, gardening, cycling, golf - below the CDC's 150 min/week target."
-        else:
-            activity_tier = "🟢 High"
-            activity_examples = "e.g. running, calisthenics, brisk walking/cycling most days - meets or exceeds the CDC's 150 min/week target."
-        st.caption(f"Your activity: **{weekly_activity_minutes} min/week** — {activity_tier}")
-        st.caption(activity_examples)
-        st.caption("CDC target: 150 min/week (e.g. 30 min, 5 days/week). Examples from the original BRFSS question: running, calisthenics, golf, gardening, walking for exercise.")
+        st.markdown("**Physical Activity Level**")
+        st.caption("🔴 **Low** — 0 min/week. e.g. mostly sitting, no regular walking, gardening, or exercise.")
+        st.caption("🟡 **Moderate** — 1-149 min/week (below CDC target). e.g. brisk walking, gardening, cycling, or golf, on some days.")
+        st.caption("🟢 **High** — 150+ min/week (meets CDC's target, e.g. 30 min, 5 days/week). e.g. running, calisthenics, or brisk walking/cycling most days.")
+        activity_level = st.selectbox("Which best describes your activity level?", ["Low", "Moderate", "High"])
+        phys_activity_live = activity_level != "Low"
 
         fruits_per_day = st.number_input("How many servings of fruit do you eat per day?", min_value=0, max_value=10, value=0)
         fruits = "Yes" if fruits_per_day >= 1 else "No"
@@ -138,6 +129,7 @@ with main_left:
         st.subheader("Step 5: Additional Health Information")
         st.caption("These are also used by the model and directly affect the accuracy of your result.")
         gen_health = st.selectbox("How would you rate your general health?", ["Excellent", "Very good", "Good", "Fair", "Poor"])
+        st.caption("This is a personal judgment, not a checklist - there's no official criteria, since it's designed to capture your own honest sense of your health. A helpful way to think about it: compare yourself to others your own age, and consider your ability to do everyday activities like walking, climbing stairs, or carrying groceries.")
         ment_hlth_days = st.number_input("In the past 30 days, how many days was your mental health not good?", min_value=0, max_value=30, value=0)
         phys_hlth_days = st.number_input("In the past 30 days, how many days was your physical health not good?", min_value=0, max_value=30, value=0)
         diff_walk = st.radio("Do you have serious difficulty walking or climbing stairs?", ["No", "Yes"])
@@ -153,7 +145,6 @@ with main_right:
 
     with st.container(border=True):
         hvy_alcohol_live = (drinks_per_week > 14) if sex == "Male" else (drinks_per_week > 7)
-        phys_activity_live = weekly_activity_minutes > 0
 
         snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
         snapshot_values = [
@@ -199,7 +190,7 @@ with main_right:
             alcohol_margin_text = "Under 7 drinks/week (women) is the healthy margin used in this model."
         st.caption(f"🚬 {smoking_margin_text}")
         st.caption(f"🍷 {alcohol_margin_text}")
-        st.caption("🏃 CDC/WHO recommend 150 min/week of moderate activity (≈30 min, 5 days/week) for genuine health benefit - this model's 'active' question is a lower bar (any activity at all).")
+        st.caption("🏃 CDC/WHO recommend 150 min/week of moderate activity for genuine health benefit - see the Low/Moderate/High definitions above.")
 
     right_result_placeholder = st.container()
 
@@ -208,7 +199,7 @@ if get_result:
         hvy_alcohol = "Yes" if drinks_per_week > 14 else "No"
     else:
         hvy_alcohol = "Yes" if drinks_per_week > 7 else "No"
-    phys_activity = "Yes" if weekly_activity_minutes > 0 else "No"
+    phys_activity = "No" if activity_level == "Low" else "Yes"
 
     gen_health_map = {"Excellent": 1, "Very good": 2, "Good": 3, "Fair": 4, "Poor": 5}
     gen_health_value = gen_health_map[gen_health]
