@@ -110,7 +110,15 @@ with main_left:
         veggies_status = "🟢 Meets NZ '5+ A Day' target (5+/day)" if veggies_per_day >= 5 else ("🟡 Below target" if veggies_per_day >= 1 else "🔴 None reported")
         st.caption(f"Vegetables: {veggies_per_day}/day — {veggies_status}")
 
-        drinks_per_week = st.number_input("On average, how many alcoholic drinks do you have per week?", min_value=0, max_value=100, value=0)
+        st.markdown("**Heavy Alcohol Consumption**")
+        if sex == "Male":
+            st.caption("🔴 **Heavy** — more than 14 standard drinks per week (men).")
+            st.caption("🟢 **Not Heavy** — 14 or fewer standard drinks per week (men).")
+        else:
+            st.caption("🔴 **Heavy** — more than 7 standard drinks per week (women).")
+            st.caption("🟢 **Not Heavy** — 7 or fewer standard drinks per week (women).")
+        st.caption("Source: CDC definition, used in the original BRFSS survey this model was trained on. A standard drink = 1 can/bottle of beer, 1 glass of wine, or 1 shot of spirits.")
+        hvy_alcohol = st.radio("Based on the margin above, is your drinking heavy?", ["No", "Yes"])
 
     with st.container(border=True):
         st.subheader("Step 4: Body Measurements")
@@ -144,7 +152,7 @@ with main_right:
     st.caption("Updates instantly as you answer.")
 
     with st.container(border=True):
-        hvy_alcohol_live = (drinks_per_week > 14) if sex == "Male" else (drinks_per_week > 7)
+        hvy_alcohol_live = hvy_alcohol == "Yes"
 
         snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
         snapshot_values = [
@@ -184,21 +192,12 @@ with main_right:
         st.write("---")
         st.markdown("**Your Healthy Margins**")
         smoking_margin_text = "0 cigarettes lifetime is the only fully risk-free level - any smoking history counts."
-        if sex == "Male":
-            alcohol_margin_text = "Under 14 drinks/week (men) is the healthy margin used in this model."
-        else:
-            alcohol_margin_text = "Under 7 drinks/week (women) is the healthy margin used in this model."
         st.caption(f"🚬 {smoking_margin_text}")
-        st.caption(f"🍷 {alcohol_margin_text}")
         st.caption("🏃 CDC/WHO recommend 150 min/week of moderate activity for genuine health benefit - see the Low/Moderate/High definitions above.")
 
     right_result_placeholder = st.container()
 
 if get_result:
-    if sex == "Male":
-        hvy_alcohol = "Yes" if drinks_per_week > 14 else "No"
-    else:
-        hvy_alcohol = "Yes" if drinks_per_week > 7 else "No"
     phys_activity = "No" if activity_level == "Low" else "Yes"
 
     gen_health_map = {"Excellent": 1, "Very good": 2, "Good": 3, "Fair": 4, "Poor": 5}
