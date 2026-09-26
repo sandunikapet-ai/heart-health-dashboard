@@ -51,7 +51,7 @@ if st.session_state['view'] == 'form':
 
     logo_col, attr_col = st.columns([5, 1.3])
     with logo_col:
-        inner1, inner2, inner3 = st.columns([2, 1, 2])
+        inner1, inner2, inner3 = st.columns([1, 2, 2])
         with inner2:
             st.image("logo.png", width=160)
     with attr_col:
