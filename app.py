@@ -51,9 +51,9 @@ if st.session_state['view'] == 'form':
 
     logo_col, attr_col = st.columns([5, 1.3])
     with logo_col:
-        inner1, inner2, inner3 = st.columns([1, 2, 2])
+        inner1, inner2, inner3 = st.columns([2, 2, 2])
         with inner2:
-            st.image("logo.png", width=160)
+            st.image("logo.png", width=175)
     with attr_col:
         st.markdown("""
         <div style='background-color:#1B3A5C; padding:10px; border-radius:8px; text-align:center; font-size:10px; color:#5DADE2; margin-top:20px; border:1px solid #4A9EFF;'>
