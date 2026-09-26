@@ -49,11 +49,11 @@ if 'view' not in st.session_state:
 # ============================================================
 if st.session_state['view'] == 'form':
 
-    logo_col, attr_col = st.columns([7, 1.3])
+    logo_col, attr_col = st.columns([7, 2.4])
     with logo_col:
         inner1, inner2, inner3 = st.columns([3, 2, 3])
         with inner2:
-            st.image("logo.png", width=260)
+            st.image("logo.png", width=250)
     with attr_col:
         st.markdown("""
         <div style='background-color:#1B3A5C; padding:10px; border-radius:8px; text-align:center; font-size:10px; color:#5DADE2; margin-top:20px; border:1px solid #4A9EFF;'>
@@ -108,7 +108,10 @@ if st.session_state['view'] == 'form':
                 ["No", "Yes"]
             )
             st.markdown("**Activity**")
-            st.caption("🔴 Low: 0 min/wk. 🟡 Moderate: ~10-25 min/day avg. 🟢 High: 30+ min/day most days.")
+            st.caption("Add up all your physical activity for the whole week (any sessions, any length), then check:")
+            st.caption("🔴 **Low**: 0 total min/week.")
+            st.caption("🟡 **Moderate**: 1-149 total min/week (any combination of sessions).")
+            st.caption("🟢 **High**: 150+ total min/week (meets CDC target - e.g. 5×30min, or fewer longer sessions).")
             activity_level = st.selectbox("Your activity level?", ["Low", "Moderate", "High"])
             phys_activity_live = activity_level != "Low"
 
