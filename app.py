@@ -49,10 +49,17 @@ if 'view' not in st.session_state:
 # ============================================================
 if st.session_state['view'] == 'form':
 
-    logo_col1, logo_col2, logo_col3 = st.columns([2, 1, 2])
-    with logo_col2:
-        st.image("logo.png", width=150)
-    st.markdown("<p style='text-align:center; color:#5DADE2; font-size:11px; margin-top:-8px;'>Developed by Petronilda Biyanwila | Yoobee College of Creative Innovation | MBI908 Capstone</p>", unsafe_allow_html=True)
+    logo_col, attr_col = st.columns([5, 1.3])
+    with logo_col:
+        inner1, inner2, inner3 = st.columns([1, 2, 1])
+        with inner2:
+            st.image("logo.png", use_container_width=True)
+    with attr_col:
+        st.markdown("""
+        <div style='background-color:#1B3A5C; padding:10px; border-radius:8px; text-align:center; font-size:10px; color:#5DADE2; margin-top:20px; border:1px solid #4A9EFF;'>
+            Developed by<br>Petronilda Biyanwila<br>Yoobee College of<br>Creative Innovation<br>MBI908 Capstone
+        </div>
+        """, unsafe_allow_html=True)
 
     st.write("---")
     get_result_top = st.button("Get My Result", use_container_width=True, key="btn_top")
