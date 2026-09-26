@@ -22,6 +22,7 @@ BOX_BG = '#1B3A5C'
 
 st.markdown("""
 <style>
+.block-container {padding-top: 1.5rem; padding-bottom: 1rem;}
 div.stButton > button {
     background-color: white;
     color: black;
@@ -48,10 +49,10 @@ if 'view' not in st.session_state:
 # ============================================================
 if st.session_state['view'] == 'form':
 
-    logo_col1, logo_col2, logo_col3 = st.columns([2, 1, 2])
+    logo_col1, logo_col2, logo_col3 = st.columns([3, 1, 3])
     with logo_col2:
-        st.image("logo.png", width=140)
-        st.markdown("<p style='text-align:center; color:#5DADE2; font-size:11px;'>Developed by Petronilda Biyanwila | Yoobee College of Creative Innovation | MBI908 Capstone</p>", unsafe_allow_html=True)
+        st.image("logo.png", width=90)
+    st.markdown("<p style='text-align:center; color:#5DADE2; font-size:11px; margin-top:-10px;'>Developed by Petronilda Biyanwila | Yoobee College of Creative Innovation | MBI908 Capstone</p>", unsafe_allow_html=True)
 
     with st.expander("What do these terms mean?"):
         st.write("**Likelihood estimate**: How closely your profile matches patterns linked to heart disease in this dataset. This is not a diagnosis or a guaranteed future outcome.")
@@ -59,155 +60,98 @@ if st.session_state['view'] == 'form':
         st.write("**Illustrative model scenario**: A 'what-if' example showing how the estimate would change if one factor changed. It reflects patterns in the data, not a promise about your real health.")
         st.write("**Percentile**: Shows where your result sits compared to everyone else in this dataset, not a clinical category.")
 
-    st.write("---")
+    step1, step2, step3 = st.columns(3)
 
-    main_left, main_right = st.columns([1.4, 1])
-
-    with main_left:
-        st.header("Your Information")
-
+    with step1:
         with st.container(border=True):
-            st.subheader("Step 1: Required Information")
-            st.caption("These need a Yes/No answer, since guessing could give a misleading result.")
-            c1a, c1b = st.columns(2)
-            with c1a:
-                high_bp = st.radio("High blood pressure diagnosed by a doctor?", ["No", "Yes"])
-                chol_check = st.radio("Cholesterol checked in the past 5 years?", ["No", "Yes"])
-                st.caption("This asks whether you've had a test done at all, regardless of the result.")
-            with c1b:
-                high_chol = st.radio("High cholesterol diagnosed by a doctor?", ["No", "Yes"])
-                st.caption("This asks whether a doctor has EVER told you this, even years ago - your answer may not reflect your current level if not rechecked recently.")
-                stroke = st.radio("Ever told you had a stroke?", ["No", "Yes"])
+            st.subheader("Step 1: Required Info")
+            st.caption("Yes/No answers, since guessing could mislead the result.")
+            high_bp = st.radio("High blood pressure diagnosed by a doctor?", ["No", "Yes"])
+            high_chol = st.radio("High cholesterol diagnosed by a doctor?", ["No", "Yes"])
+            st.caption("Asks if a doctor EVER told you this, even years ago - may not reflect current level if not rechecked recently.")
+            chol_check = st.radio("Cholesterol checked in the past 5 years?", ["No", "Yes"])
+            st.caption("Asks if you've had a test at all, regardless of result.")
+            stroke = st.radio("Ever told you had a stroke?", ["No", "Yes"])
             diabetes = st.selectbox("Do you have diabetes?", ["No", "Pre-diabetes/borderline", "Yes"])
 
+    with step2:
         with st.container(border=True):
             st.subheader("Step 2: About You")
-            st.caption("If unsure about income or education, select 'Unsure'.")
-            c2a, c2b = st.columns(2)
-            with c2a:
-                sex = st.radio("Sex", ["Female", "Male"])
-                education = st.selectbox("Highest education level", [
-                    "Unsure", "None or only kindergarten", "Grades 1-8", "Grades 9-11",
-                    "Grade 12 or GED", "Some college (1-3 years)", "College graduate (4+ years)"
-                ])
-            with c2b:
-                age_group = st.selectbox("Age group", [
-                    "18-24", "25-29", "30-34", "35-39", "40-44", "45-49",
-                    "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+"
-                ])
-                income = st.selectbox("Annual household income", [
-                    "Unsure", "Under $10,000", "$10,000-$14,999", "$15,000-$19,999",
-                    "$20,000-$24,999", "$25,000-$34,999", "$35,000-$49,999",
-                    "$50,000-$74,999", "$75,000 or more"
-                ])
+            st.caption("If unsure about income/education, select 'Unsure'.")
+            sex = st.radio("Sex", ["Female", "Male"])
+            age_group = st.selectbox("Age group", [
+                "18-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+                "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+"
+            ])
+            education = st.selectbox("Highest education level", [
+                "Unsure", "None or only kindergarten", "Grades 1-8", "Grades 9-11",
+                "Grade 12 or GED", "Some college (1-3 years)", "College graduate (4+ years)"
+            ])
+            income = st.selectbox("Annual household income", [
+                "Unsure", "Under $10,000", "$10,000-$14,999", "$15,000-$19,999",
+                "$20,000-$24,999", "$25,000-$34,999", "$35,000-$49,999",
+                "$50,000-$74,999", "$75,000 or more"
+            ])
 
+    with step3:
         with st.container(border=True):
             st.subheader("Step 3: Lifestyle")
-            st.caption("These directly shape your recommendations, so please answer all.")
-
+            st.caption("These directly shape your recommendations.")
             smoker = st.radio(
-                "In your entire life, have you smoked at least 100 cigarettes (about 5 packs)? This includes past smoking, even if you've since quit.",
+                "Smoked 100+ cigarettes in your lifetime (~5 packs)? Includes past smoking, even if quit.",
                 ["No", "Yes"]
             )
+            st.markdown("**Activity**")
+            st.caption("🔴 Low: 0 min/wk. 🟡 Moderate: ~10-25 min/day avg. 🟢 High: 30+ min/day most days.")
+            activity_level = st.selectbox("Your activity level?", ["Low", "Moderate", "High"])
+            phys_activity_live = activity_level != "Low"
 
-            c3a, c3b = st.columns(2)
-            with c3a:
-                st.markdown("**Physical Activity**")
-                st.caption("🔴 Low: 0 min/week. 🟡 Moderate: ~10-25 min/day avg. 🟢 High: 30+ min/day, most days (150+ min/week).")
-                activity_level = st.selectbox("Your activity level?", ["Low", "Moderate", "High"])
-                phys_activity_live = activity_level != "Low"
+            fruits_per_day = st.number_input("Fruit servings/day", min_value=0, max_value=10, value=0)
+            fruits = "Yes" if fruits_per_day >= 1 else "No"
+            veggies_per_day = st.number_input("Vegetable servings/day", min_value=0, max_value=10, value=0)
+            veggies = "Yes" if veggies_per_day >= 1 else "No"
+            st.caption("🟢 Targets: 2+/day fruit, 5+/day veg (NZ '5+ A Day').")
 
-                fruits_per_day = st.number_input("Fruit servings per day", min_value=0, max_value=10, value=0)
-                fruits = "Yes" if fruits_per_day >= 1 else "No"
-                st.caption("🟢 2+/day meets NZ '5+ A Day' target.")
+            st.markdown("**Heavy Alcohol**")
+            if sex == "Male":
+                st.caption("🔴 Heavy: more than 14 drinks/week (men).")
+            else:
+                st.caption("🔴 Heavy: more than 7 drinks/week (women).")
+            st.caption("1 drink ≈ 330ml beer(4%), 100ml wine(12.5%), or 30ml spirits(42%).")
+            hvy_alcohol = st.radio("Is your drinking heavy?", ["No", "Yes"])
 
-            with c3b:
-                st.markdown("**Heavy Alcohol Consumption**")
-                if sex == "Male":
-                    st.caption("🔴 Heavy: more than 14 standard drinks/week (men).")
-                else:
-                    st.caption("🔴 Heavy: more than 7 standard drinks/week (women).")
-                st.caption("1 standard drink ≈ 330ml beer (4%), 100ml wine (12.5%), or 30ml spirits (42%).")
-                hvy_alcohol = st.radio("Is your drinking heavy?", ["No", "Yes"])
+    step4, step5 = st.columns(2)
 
-                veggies_per_day = st.number_input("Vegetable servings per day", min_value=0, max_value=10, value=0)
-                veggies = "Yes" if veggies_per_day >= 1 else "No"
-                st.caption("🟢 5+/day meets NZ '5+ A Day' target.")
-
+    with step4:
         with st.container(border=True):
             st.subheader("Step 4: Body Measurements")
-            c4a, c4b = st.columns(2)
-            with c4a:
-                height_cm = st.number_input("Height (cm)", min_value=100, max_value=250, value=170)
-                height_inches = height_cm / 2.54
-                st.caption(f"≈ {height_inches:.1f} in ({int(height_inches // 12)} ft {height_inches % 12:.0f} in)")
-            with c4b:
-                weight_kg = st.number_input("Weight (kg)", min_value=30, max_value=250, value=70)
-                weight_lb = weight_kg * 2.20462
-                st.caption(f"≈ {weight_lb:.1f} lb")
+            height_cm = st.number_input("Height (cm)", min_value=100, max_value=250, value=170)
+            height_inches = height_cm / 2.54
+            st.caption(f"≈ {height_inches:.1f} in")
+            weight_kg = st.number_input("Weight (kg)", min_value=30, max_value=250, value=70)
+            weight_lb = weight_kg * 2.20462
+            st.caption(f"≈ {weight_lb:.1f} lb")
             bmi_calculated = weight_kg / ((height_cm / 100) ** 2)
-            st.write(f"Your calculated BMI: **{bmi_calculated:.1f}**")
+            st.write(f"BMI: **{bmi_calculated:.1f}**")
 
+    with step5:
         with st.container(border=True):
-            st.subheader("Step 5: Additional Health Information")
-            st.caption("These are also used by the model and directly affect the accuracy of your result.")
-
-            gen_health = st.selectbox("How would you rate your general health?", ["Excellent", "Very good", "Good", "Fair", "Poor"])
+            st.subheader("Step 5: Additional Health Info")
+            gen_health = st.selectbox("Rate your general health", ["Excellent", "Very good", "Good", "Fair", "Poor"])
             with st.expander("What do these mean?"):
-                st.caption("🟢 **Excellent**: No ongoing health problems; full activity ability; rarely unwell.")
-                st.caption("🟢 **Very good**: Minor, infrequent issues that don't limit daily activities.")
-                st.caption("🟡 **Good**: A manageable ongoing condition may exist, but most activities are unaffected.")
-                st.caption("🟠 **Fair**: An ongoing condition noticeably limits some daily activities sometimes.")
-                st.caption("🔴 **Poor**: An ongoing condition significantly limits daily activities most of the time.")
+                st.caption("🟢 **Excellent**: No ongoing problems; full activity ability.")
+                st.caption("🟢 **Very good**: Minor, infrequent issues, no limits.")
+                st.caption("🟡 **Good**: A manageable condition may exist; most activities unaffected.")
+                st.caption("🟠 **Fair**: A condition limits some activities sometimes.")
+                st.caption("🔴 **Poor**: A condition limits activities most of the time.")
+            ment_hlth_days = st.number_input("Days mental health wasn't good (past 30)", min_value=0, max_value=30, value=0)
+            phys_hlth_days = st.number_input("Days physical health wasn't good (past 30)", min_value=0, max_value=30, value=0)
+            diff_walk = st.radio("Serious difficulty walking/climbing stairs?", ["No", "Yes"])
+            st.caption("Includes cardiovascular causes (breathlessness from heart failure) and others (stroke weakness, arthritis, COPD).")
+            any_healthcare = st.radio("Have health care coverage?", ["Yes", "No"])
+            no_doc_cost = st.radio("Skipped a doctor visit due to cost (past year)?", ["No", "Yes"])
 
-            c5a, c5b = st.columns(2)
-            with c5a:
-                ment_hlth_days = st.number_input("Days in past 30 mental health wasn't good", min_value=0, max_value=30, value=0)
-                diff_walk = st.radio("Serious difficulty walking or climbing stairs?", ["No", "Yes"])
-                st.caption("Includes cardiovascular causes (e.g. breathlessness from heart failure) and others (stroke weakness, arthritis, COPD).")
-            with c5b:
-                phys_hlth_days = st.number_input("Days in past 30 physical health wasn't good", min_value=0, max_value=30, value=0)
-                any_healthcare = st.radio("Have health care coverage?", ["Yes", "No"])
-                no_doc_cost = st.radio("Skipped a doctor visit due to cost (past year)?", ["No", "Yes"])
-
-        get_result = st.button("Get My Result", use_container_width=True)
-
-    with main_right:
-        st.header("Live Snapshot")
-        st.caption("Updates instantly as you answer.")
-
-        with st.container(border=True):
-            hvy_alcohol_live = hvy_alcohol == "Yes"
-            snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
-            snapshot_values = [
-                1 if high_bp == "Yes" else 0, 1 if high_chol == "Yes" else 0,
-                1 if stroke == "Yes" else 0, 1 if smoker == "Yes" else 0,
-                1 if phys_activity_live else 0, 1 if fruits == "Yes" else 0,
-                1 if veggies == "Yes" else 0, 1 if hvy_alcohol_live else 0,
-            ]
-            protective_when_yes = {"Active", "Fruits", "Veggies"}
-            snapshot_colors = []
-            for label, val in zip(snapshot_labels, snapshot_values):
-                if label in protective_when_yes:
-                    snapshot_colors.append(GREEN if val == 1 else RED)
-                else:
-                    snapshot_colors.append(RED if val == 1 else GREEN)
-
-            fig_snap, ax_snap = plt.subplots(figsize=(5, 2.8))
-            fig_snap.patch.set_facecolor(BOX_BG)
-            ax_snap.set_facecolor(BOX_BG)
-            ax_snap.barh(snapshot_labels[::-1], [1]*8, color=snapshot_colors[::-1])
-            ax_snap.set_xlim(0, 1)
-            ax_snap.set_xticks([])
-            ax_snap.tick_params(colors='white')
-            for spine in ax_snap.spines.values():
-                spine.set_visible(False)
-            plt.tight_layout()
-            st.pyplot(fig_snap, use_container_width=True)
-
-            bmi_status = "Healthy range" if 18.5 <= bmi_calculated <= 24.9 else "Outside healthy range"
-            bmi_color = "green" if 18.5 <= bmi_calculated <= 24.9 else "orange"
-            st.markdown(f"BMI: **{bmi_calculated:.1f}** — :{bmi_color}[{bmi_status}]")
+    get_result = st.button("Get My Result", use_container_width=True)
 
     if get_result:
         phys_activity = "No" if activity_level == "Low" else "Yes"
@@ -259,6 +203,33 @@ if st.session_state['view'] == 'form':
 
         all_train_probas = model.predict_proba(X_train)[:, 1]
         percentile = (all_train_probas < likelihood).mean() * 100
+
+        # Live Snapshot chart - built now, shown on results page
+        hvy_alcohol_live = hvy_alcohol == "Yes"
+        snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
+        snapshot_values = [
+            1 if high_bp == "Yes" else 0, 1 if high_chol == "Yes" else 0,
+            1 if stroke == "Yes" else 0, 1 if smoker == "Yes" else 0,
+            1 if phys_activity_live else 0, 1 if fruits == "Yes" else 0,
+            1 if veggies == "Yes" else 0, 1 if hvy_alcohol_live else 0,
+        ]
+        protective_when_yes = {"Active", "Fruits", "Veggies"}
+        snapshot_colors = []
+        for label, val in zip(snapshot_labels, snapshot_values):
+            if label in protective_when_yes:
+                snapshot_colors.append(GREEN if val == 1 else RED)
+            else:
+                snapshot_colors.append(RED if val == 1 else GREEN)
+        fig_snap, ax_snap = plt.subplots(figsize=(6, 3))
+        fig_snap.patch.set_facecolor(BOX_BG)
+        ax_snap.set_facecolor(BOX_BG)
+        ax_snap.barh(snapshot_labels[::-1], [1]*8, color=snapshot_colors[::-1])
+        ax_snap.set_xlim(0, 1)
+        ax_snap.set_xticks([])
+        ax_snap.tick_params(colors='white')
+        for spine in ax_snap.spines.values():
+            spine.set_visible(False)
+        plt.tight_layout()
 
         fig_gauge, ax_gauge = plt.subplots(figsize=(3.6, 2.2), subplot_kw={'projection': 'polar'})
         fig_gauge.patch.set_alpha(0)
@@ -431,11 +402,13 @@ if st.session_state['view'] == 'form':
         donut_path = os.path.join(temp_dir, 'donut.png')
         radar_path = os.path.join(temp_dir, 'radar.png')
         trend_path = os.path.join(temp_dir, 'trend.png')
+        snap_path = os.path.join(temp_dir, 'snap.png')
         fig_gauge.savefig(gauge_path, dpi=150, bbox_inches='tight', facecolor='white')
         fig_bar.savefig(bar_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_donut.savefig(donut_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_radar.savefig(radar_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_trend.savefig(trend_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
+        fig_snap.savefig(snap_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
 
         st.session_state['risk_factors'] = risk_factors
         st.session_state['good_factors'] = good_factors
@@ -445,11 +418,13 @@ if st.session_state['view'] == 'form':
         st.session_state['percentile'] = percentile
         st.session_state['tier_label'] = tier_label
         st.session_state['tier_color'] = tier_color
+        st.session_state['bmi_calculated'] = bmi_calculated
+        st.session_state['bmi_status'] = "Healthy range" if 18.5 <= bmi_calculated <= 24.9 else "Outside healthy range"
         st.session_state['RECOMMENDATION_LIBRARY'] = RECOMMENDATION_LIBRARY
         st.session_state['POSITIVE_MESSAGES'] = POSITIVE_MESSAGES
         st.session_state['good_factor_labels'] = good_factor_labels
         st.session_state['risk_factor_labels'] = risk_factor_labels
-        st.session_state['chart_paths'] = {'gauge': gauge_path, 'bar': bar_path, 'donut': donut_path, 'radar': radar_path, 'trend': trend_path}
+        st.session_state['chart_paths'] = {'gauge': gauge_path, 'bar': bar_path, 'donut': donut_path, 'radar': radar_path, 'trend': trend_path, 'snapshot': snap_path}
         st.session_state['view'] = 'results'
         st.rerun()
 
@@ -469,6 +444,8 @@ elif st.session_state['view'] == 'results':
     percentile = st.session_state['percentile']
     tier_label = st.session_state['tier_label']
     tier_color = st.session_state['tier_color']
+    bmi_calculated = st.session_state['bmi_calculated']
+    bmi_status = st.session_state['bmi_status']
     RECOMMENDATION_LIBRARY = st.session_state['RECOMMENDATION_LIBRARY']
     POSITIVE_MESSAGES = st.session_state['POSITIVE_MESSAGES']
     good_factor_labels = st.session_state['good_factor_labels']
@@ -481,6 +458,7 @@ elif st.session_state['view'] == 'results':
         st.metric("Likelihood Estimate", f"{likelihood:.1%}")
         st.markdown(f":{tier_color}[**{tier_label}**]")
         st.caption(f"Higher than {percentile:.0f}% of people in this dataset. Dataset-based estimate, not a clinical risk score.")
+        st.write(f"BMI: **{bmi_calculated:.1f}** ({bmi_status})")
     with res_col2:
         st.image(chart_paths['gauge'])
 
@@ -524,13 +502,13 @@ elif st.session_state['view'] == 'results':
 
     ch1, ch2 = st.columns(2)
     with ch1:
-        st.image(chart_paths['bar'], caption="Top 5 Contributing Factors")
+        st.image(chart_paths['snapshot'], caption="Live Snapshot of Your Answers")
     with ch2:
-        st.image(chart_paths['donut'], caption="Habits Breakdown")
+        st.image(chart_paths['bar'], caption="Top 5 Contributing Factors")
 
     ch3, ch4 = st.columns(2)
     with ch3:
-        st.image(chart_paths['radar'], caption="Health Snapshot")
+        st.image(chart_paths['donut'], caption="Habits Breakdown")
         list_col1, list_col2 = st.columns(2)
         with list_col1:
             st.markdown(f":green[**✅ Good ({len(good_factors)})**]")
@@ -544,6 +522,7 @@ elif st.session_state['view'] == 'results':
             else:
                 st.write("- None")
     with ch4:
+        st.image(chart_paths['radar'], caption="Health Snapshot")
         st.image(chart_paths['trend'], caption="How Likelihood Changes With Age")
 
     st.write("---")
@@ -604,6 +583,8 @@ elif st.session_state['view'] == 'results':
     pdf.multi_cell(0, 8, "Charts")
     pdf.ln(2)
     pdf.image(chart_paths['gauge'], x=70, w=70)
+    pdf.ln(3)
+    pdf.image(chart_paths['snapshot'], x=25, w=160)
     pdf.ln(3)
     pdf.image(chart_paths['bar'], x=25, w=160)
     pdf.ln(3)
