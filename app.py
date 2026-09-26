@@ -49,16 +49,15 @@ if 'view' not in st.session_state:
 # ============================================================
 if st.session_state['view'] == 'form':
 
-    logo_col1, logo_col2, logo_col3 = st.columns([3, 1, 3])
+    logo_col1, logo_col2, logo_col3 = st.columns([2, 1, 2])
     with logo_col2:
-        st.image("logo.png", width=90)
-    st.markdown("<p style='text-align:center; color:#5DADE2; font-size:11px; margin-top:-10px;'>Developed by Petronilda Biyanwila | Yoobee College of Creative Innovation | MBI908 Capstone</p>", unsafe_allow_html=True)
+        st.image("logo.png", width=150)
+    st.markdown("<p style='text-align:center; color:#5DADE2; font-size:11px; margin-top:-8px;'>Developed by Petronilda Biyanwila | Yoobee College of Creative Innovation | MBI908 Capstone</p>", unsafe_allow_html=True)
 
-    with st.expander("What do these terms mean?"):
-        st.write("**Likelihood estimate**: How closely your profile matches patterns linked to heart disease in this dataset. This is not a diagnosis or a guaranteed future outcome.")
-        st.write("**Contributing factor**: Shows which of your answers had the biggest effect on your result, and whether each one pushed it up or down.")
-        st.write("**Illustrative model scenario**: A 'what-if' example showing how the estimate would change if one factor changed. It reflects patterns in the data, not a promise about your real health.")
-        st.write("**Percentile**: Shows where your result sits compared to everyone else in this dataset, not a clinical category.")
+    st.write("---")
+    get_result_top = st.button("Get My Result", use_container_width=True, key="btn_top")
+    st.caption("Fill in the sections below, then click here (or the button at the bottom) when ready.")
+    st.write("---")
 
     step1, step2, step3 = st.columns(3)
 
@@ -151,7 +150,15 @@ if st.session_state['view'] == 'form':
             any_healthcare = st.radio("Have health care coverage?", ["Yes", "No"])
             no_doc_cost = st.radio("Skipped a doctor visit due to cost (past year)?", ["No", "Yes"])
 
-    get_result = st.button("Get My Result", use_container_width=True)
+    get_result_bottom = st.button("Get My Result", use_container_width=True, key="btn_bottom")
+
+    with st.expander("What do these terms mean?"):
+        st.write("**Likelihood estimate**: How closely your profile matches patterns linked to heart disease in this dataset. This is not a diagnosis or a guaranteed future outcome.")
+        st.write("**Contributing factor**: Shows which of your answers had the biggest effect on your result, and whether each one pushed it up or down.")
+        st.write("**Illustrative model scenario**: A 'what-if' example showing how the estimate would change if one factor changed. It reflects patterns in the data, not a promise about your real health.")
+        st.write("**Percentile**: Shows where your result sits compared to everyone else in this dataset, not a clinical category.")
+
+    get_result = get_result_top or get_result_bottom
 
     if get_result:
         phys_activity = "No" if activity_level == "Low" else "Yes"
@@ -204,7 +211,6 @@ if st.session_state['view'] == 'form':
         all_train_probas = model.predict_proba(X_train)[:, 1]
         percentile = (all_train_probas < likelihood).mean() * 100
 
-        # Live Snapshot chart - built now, shown on results page
         hvy_alcohol_live = hvy_alcohol == "Yes"
         snapshot_labels = ["High BP", "High Chol", "Stroke", "Smoker", "Active", "Fruits", "Veggies", "Alcohol"]
         snapshot_values = [
