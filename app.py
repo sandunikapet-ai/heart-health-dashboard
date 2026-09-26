@@ -93,12 +93,24 @@ with main_left:
             ["No", "Yes"]
         )
 
-        st.markdown("**Physical Activity Level**")
-        st.caption("🔴 **Low** — 0 min/week. e.g. mostly sitting, no regular walking, gardening, or exercise.")
-        st.caption("🟡 **Moderate** — 1-149 min/week (below CDC target). e.g. brisk walking, gardening, cycling, or golf, on some days.")
-        st.caption("🟢 **High** — 150+ min/week (meets CDC's target, e.g. 30 min, 5 days/week). e.g. running, calisthenics, or brisk walking/cycling most days.")
-        activity_level = st.selectbox("Which best describes your activity level?", ["Low", "Moderate", "High"])
-        phys_activity_live = activity_level != "Low"
+        st.markdown("**Physical Activity**")
+        activity_days_per_week = st.number_input("How many days per week do you do physical activity (outside your regular job)?", min_value=0, max_value=7, value=0)
+        activity_minutes_per_session = st.number_input("On average, how many minutes per session?", min_value=0, max_value=180, value=0)
+        weekly_activity_minutes = activity_days_per_week * activity_minutes_per_session
+
+        if weekly_activity_minutes == 0:
+            activity_level = "Low"
+            activity_tier_display = "🔴 Low (0 min/week)"
+        elif weekly_activity_minutes < 150:
+            activity_level = "Moderate"
+            activity_tier_display = f"🟡 Moderate ({weekly_activity_minutes} min/week)"
+        else:
+            activity_level = "High"
+            activity_tier_display = f"🟢 High ({weekly_activity_minutes} min/week)"
+
+        st.caption(f"Your result: **{activity_tier_display}**")
+        st.caption("Definitions - 🔴 Low: 0 min/week. 🟡 Moderate: 1-149 min/week. 🟢 High: 150+ min/week (meets CDC target of 30 min, 5 days/week).")
+        phys_activity_live = weekly_activity_minutes > 0
 
         fruits_per_day = st.number_input("How many servings of fruit do you eat per day?", min_value=0, max_value=10, value=0)
         fruits = "Yes" if fruits_per_day >= 1 else "No"
@@ -117,7 +129,7 @@ with main_left:
         else:
             st.caption("🔴 **Heavy** — more than 7 standard drinks per week (women).")
             st.caption("🟢 **Not Heavy** — 7 or fewer standard drinks per week (women).")
-        st.caption("Source: CDC definition, used in the original BRFSS survey this model was trained on. A standard drink = 1 can/bottle of beer, 1 glass of wine, or 1 shot of spirits.")
+        st.caption("A NZ standard drink = 10g pure alcohol, approximately: 330ml can of beer (4%), 100ml glass of wine (12.5%), or 30ml of spirits (42%). Source: Health Promotion Agency NZ (alcohol.org.nz). The 14/7 per week threshold is from the CDC definition used in the original BRFSS survey this model was trained on.")
         hvy_alcohol = st.radio("Based on the margin above, is your drinking heavy?", ["No", "Yes"])
 
     with st.container(border=True):
@@ -191,14 +203,13 @@ with main_right:
 
         st.write("---")
         st.markdown("**Your Healthy Margins**")
-        smoking_margin_text = "0 cigarettes lifetime is the only fully risk-free level - any smoking history counts."
-        st.caption(f"🚬 {smoking_margin_text}")
+        st.caption("🚬 0 cigarettes lifetime is the only fully risk-free level - any smoking history counts.")
         st.caption("🏃 CDC/WHO recommend 150 min/week of moderate activity for genuine health benefit - see the Low/Moderate/High definitions above.")
 
     right_result_placeholder = st.container()
 
 if get_result:
-    phys_activity = "No" if activity_level == "Low" else "Yes"
+    phys_activity = "Yes" if weekly_activity_minutes > 0 else "No"
 
     gen_health_map = {"Excellent": 1, "Very good": 2, "Good": 3, "Fair": 4, "Poor": 5}
     gen_health_value = gen_health_map[gen_health]
