@@ -333,9 +333,10 @@ if st.session_state['view'] == 'form':
             ax_donut.text(0, 0, f"{n_good}/{n_good+n_risk}\nHealthy", ha='center', va='center', color='white', fontsize=12, fontweight='bold')
         plt.tight_layout()
 
-        radar_categories = ['Activity', 'Fruits', 'Veggies', 'BP Health', 'Chol Health', 'Non-Smoker']
+        radar_categories = ['Activity', 'Fruits', 'Veggies', 'BP Health', 'Chol Health', 'Non-Smoker', 'Alcohol', 'BMI']
         radar_values = [1 if phys_activity == "Yes" else 0, 1 if fruits == "Yes" else 0, 1 if veggies == "Yes" else 0,
-                         1 if high_bp == "No" else 0, 1 if high_chol == "No" else 0, 1 if smoker == "No" else 0]
+                         1 if high_bp == "No" else 0, 1 if high_chol == "No" else 0, 1 if smoker == "No" else 0,
+                         1 if hvy_alcohol == "No" else 0, 1 if 18.5 <= bmi_calculated <= 24.9 else 0]
         radar_values_closed = radar_values + radar_values[:1]
         radar_angles = np.linspace(0, 2*np.pi, len(radar_categories), endpoint=False).tolist()
         radar_angles += radar_angles[:1]
@@ -345,7 +346,7 @@ if st.session_state['view'] == 'form':
         ax_radar.plot(radar_angles, radar_values_closed, color=BLUE, linewidth=2)
         ax_radar.fill(radar_angles, radar_values_closed, color=BLUE, alpha=0.35)
         ax_radar.set_xticks(radar_angles[:-1])
-        ax_radar.set_xticklabels(radar_categories, color='white', size=9)
+        ax_radar.set_xticklabels(radar_categories, color='white', size=8)
         ax_radar.set_yticks([])
         ax_radar.spines['polar'].set_color('white')
         plt.tight_layout()
