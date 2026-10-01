@@ -22,7 +22,11 @@ BOX_BG = '#1B3A5C'
 
 st.markdown("""
 <style>
-.block-container {padding-top: 1.5rem; padding-bottom: 1rem;}
+.block-container {padding-top: 3rem; padding-bottom: 1rem;}
+div.stButton {
+    display: flex;
+    justify-content: center;
+}
 div.stButton > button {
     background-color: white;
     color: black;
@@ -34,6 +38,18 @@ div.stButton > button:hover {
     background-color: #f0f0f0;
     color: black;
     border: 3px solid #F39C12;
+}
+div[data-testid="column"] {
+    display: flex;
+}
+div[data-testid="column"] > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+}
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    flex: 1;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -69,9 +85,7 @@ if st.session_state['view'] == 'form':
     """, unsafe_allow_html=True)
 
     st.write("---")
-    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 1])
-    with btn_col2:
-        get_result_top = st.button("Get My Result", key="btn_top")
+    get_result_top = st.button("Get My Result", key="btn_top")
     st.caption("Fill in the sections below, then click here (or the button at the bottom) when ready.")
     st.write("---")
 
@@ -176,9 +190,7 @@ if st.session_state['view'] == 'form':
             any_healthcare = st.radio("Have health care coverage?", ["Yes", "No"])
             no_doc_cost = st.radio("Skipped a doctor visit due to cost (past year)?", ["No", "Yes"])
 
-    btn_col4, btn_col5, btn_col6 = st.columns([1, 1, 1])
-    with btn_col5:
-        get_result_bottom = st.button("Get My Result", key="btn_bottom")
+    get_result_bottom = st.button("Get My Result", key="btn_bottom")
 
     with st.expander("What do these terms mean?"):
         st.write("**Likelihood estimate**: How closely your profile matches patterns linked to heart disease in this dataset. This is not a diagnosis or a guaranteed future outcome.")
@@ -254,18 +266,18 @@ if st.session_state['view'] == 'form':
                 snapshot_colors.append(GREEN if val == 1 else RED)
             else:
                 snapshot_colors.append(RED if val == 1 else GREEN)
-        fig_snap, ax_snap = plt.subplots(figsize=(5, 2.6))
+        fig_snap, ax_snap = plt.subplots(figsize=(4.2, 2.3))
         fig_snap.patch.set_facecolor(BOX_BG)
         ax_snap.set_facecolor(BOX_BG)
         ax_snap.barh(snapshot_labels[::-1], [1]*8, color=snapshot_colors[::-1])
         ax_snap.set_xlim(0, 1)
         ax_snap.set_xticks([])
-        ax_snap.tick_params(colors='white')
+        ax_snap.tick_params(colors='white', labelsize=7)
         for spine in ax_snap.spines.values():
             spine.set_visible(False)
         plt.tight_layout()
 
-        fig_gauge, ax_gauge = plt.subplots(figsize=(3.4, 2.1), subplot_kw={'projection': 'polar'})
+        fig_gauge, ax_gauge = plt.subplots(figsize=(2.8, 1.7), subplot_kw={'projection': 'polar'})
         fig_gauge.patch.set_alpha(0)
         gauge_colors = [GREEN, AMBER, RED]
         bounds = [0, 0.10, 0.30, 1.0]
@@ -291,14 +303,14 @@ if st.session_state['view'] == 'form':
         chart_features = [f for f, v in top5_contributions][::-1]
         chart_values = [v for f, v in top5_contributions][::-1]
         chart_colors = [RED if v > 0 else GREEN for v in chart_values]
-        fig_bar, ax_bar = plt.subplots(figsize=(5, 2.6))
+        fig_bar, ax_bar = plt.subplots(figsize=(4.2, 2.3))
         fig_bar.patch.set_facecolor(BOX_BG)
         ax_bar.set_facecolor(BOX_BG)
         ax_bar.barh(chart_features, chart_values, color=chart_colors)
         ax_bar.axvline(0, color='white', linewidth=0.8)
-        ax_bar.tick_params(colors='white')
+        ax_bar.tick_params(colors='white', labelsize=7)
         ax_bar.xaxis.label.set_color('white')
-        ax_bar.set_xlabel('Effect on likelihood estimate')
+        ax_bar.set_xlabel('Effect on likelihood estimate', fontsize=8)
         plt.tight_layout()
 
         good_factors, candidate_risks = [], []
@@ -325,12 +337,12 @@ if st.session_state['view'] == 'form':
         if 18.5 <= bmi_calculated <= 24.9: good_factors.append('BMI_healthy')
         elif bmi_calculated > 24.9: candidate_risks.append('BMI_high')
 
-        fig_donut, ax_donut = plt.subplots(figsize=(2.8, 2.8))
+        fig_donut, ax_donut = plt.subplots(figsize=(2.2, 2.2))
         fig_donut.patch.set_facecolor(BOX_BG)
         n_good, n_risk = len(good_factors), len(candidate_risks)
         if n_good + n_risk > 0:
             ax_donut.pie([n_good, n_risk], colors=[GREEN, RED], startangle=90, wedgeprops=dict(width=0.4, edgecolor=BOX_BG, linewidth=3))
-            ax_donut.text(0, 0, f"{n_good}/{n_good+n_risk}\nHealthy", ha='center', va='center', color='white', fontsize=12, fontweight='bold')
+            ax_donut.text(0, 0, f"{n_good}/{n_good+n_risk}\nHealthy", ha='center', va='center', color='white', fontsize=10, fontweight='bold')
         plt.tight_layout()
 
         radar_categories = ['Activity', 'Fruits', 'Veggies', 'BP Health', 'Chol Health', 'Non-Smoker']
@@ -339,13 +351,13 @@ if st.session_state['view'] == 'form':
         radar_values_closed = radar_values + radar_values[:1]
         radar_angles = np.linspace(0, 2*np.pi, len(radar_categories), endpoint=False).tolist()
         radar_angles += radar_angles[:1]
-        fig_radar, ax_radar = plt.subplots(figsize=(2.8, 2.8), subplot_kw={'projection': 'polar'})
+        fig_radar, ax_radar = plt.subplots(figsize=(2.2, 2.2), subplot_kw={'projection': 'polar'})
         fig_radar.patch.set_facecolor(BOX_BG)
         ax_radar.set_facecolor(BOX_BG)
         ax_radar.plot(radar_angles, radar_values_closed, color=BLUE, linewidth=2)
         ax_radar.fill(radar_angles, radar_values_closed, color=BLUE, alpha=0.35)
         ax_radar.set_xticks(radar_angles[:-1])
-        ax_radar.set_xticklabels(radar_categories, color='white', size=7)
+        ax_radar.set_xticklabels(radar_categories, color='white', size=6)
         ax_radar.set_yticks([])
         ax_radar.spines['polar'].set_color('white')
         plt.tight_layout()
@@ -357,16 +369,16 @@ if st.session_state['view'] == 'form':
             trend_row['Age'] = a
             trend_data = pd.DataFrame([trend_row])[X_train.columns]
             age_trend_values.append(model.predict_proba(trend_data)[0][1])
-        fig_trend, ax_trend = plt.subplots(figsize=(5.5, 2.6))
+        fig_trend, ax_trend = plt.subplots(figsize=(4.2, 2.3))
         fig_trend.patch.set_facecolor(BOX_BG)
         ax_trend.set_facecolor(BOX_BG)
-        ax_trend.plot(range(1, 14), age_trend_values, color=BLUE, linewidth=2, marker='o', markersize=4)
+        ax_trend.plot(range(1, 14), age_trend_values, color=BLUE, linewidth=2, marker='o', markersize=3)
         ax_trend.axvline(person_row['Age'], color=AMBER, linewidth=2, linestyle='--')
-        ax_trend.text(person_row['Age'], max(age_trend_values)*0.9, ' Your age', color='white', fontweight='bold')
+        ax_trend.text(person_row['Age'], max(age_trend_values)*0.9, ' Your age', color='white', fontweight='bold', fontsize=7)
         ax_trend.set_xticks(range(1, 14))
-        ax_trend.set_xticklabels(age_labels, rotation=45, ha='right', color='white', fontsize=7)
-        ax_trend.tick_params(colors='white')
-        ax_trend.set_ylabel('Likelihood Estimate', color='white')
+        ax_trend.set_xticklabels(age_labels, rotation=45, ha='right', color='white', fontsize=6)
+        ax_trend.tick_params(colors='white', labelsize=6)
+        ax_trend.set_ylabel('Likelihood Estimate', color='white', fontsize=8)
         for spine in ax_trend.spines.values():
             spine.set_color('white')
         plt.tight_layout()
@@ -466,11 +478,9 @@ if st.session_state['view'] == 'form':
 # RESULTS VIEW
 # ============================================================
 elif st.session_state['view'] == 'results':
-    btn_back1, btn_back2, btn_back3 = st.columns([1, 1, 1])
-    with btn_back2:
-        if st.button("← Back to Form"):
-            st.session_state['view'] = 'form'
-            st.rerun()
+    if st.button("← Back to Form"):
+        st.session_state['view'] = 'form'
+        st.rerun()
 
     risk_factors = st.session_state['risk_factors']
     good_factors = st.session_state['good_factors']
@@ -496,7 +506,7 @@ elif st.session_state['view'] == 'results':
         st.caption(f"Higher than {percentile:.0f}% of people in this dataset. Dataset-based estimate, not a clinical risk score.")
         st.write(f"BMI: **{bmi_calculated:.1f}** ({bmi_status})")
     with res_col2:
-        st.image(chart_paths['gauge'], use_container_width=True)
+        st.image(chart_paths['gauge'], width=280)
 
     st.write("---")
 
@@ -538,13 +548,13 @@ elif st.session_state['view'] == 'results':
 
     ch1, ch2 = st.columns(2)
     with ch1:
-        st.image(chart_paths['snapshot'], caption="Live Snapshot of Your Answers", use_container_width=True)
+        st.image(chart_paths['snapshot'], caption="Live Snapshot of Your Answers", width=380)
     with ch2:
-        st.image(chart_paths['bar'], caption="Top 5 Contributing Factors", use_container_width=True)
+        st.image(chart_paths['bar'], caption="Top 5 Contributing Factors", width=380)
 
     ch3, ch4 = st.columns(2)
     with ch3:
-        st.image(chart_paths['donut'], caption="Habits Breakdown", use_container_width=True)
+        st.image(chart_paths['donut'], caption="Habits Breakdown", width=240)
         list_col1, list_col2 = st.columns(2)
         with list_col1:
             st.markdown(f":green[**✅ Good ({len(good_factors)})**]")
@@ -558,8 +568,8 @@ elif st.session_state['view'] == 'results':
             else:
                 st.write("- None")
     with ch4:
-        st.image(chart_paths['radar'], caption="Health Snapshot", use_container_width=True)
-        st.image(chart_paths['trend'], caption="How Likelihood Changes With Age", use_container_width=True)
+        st.image(chart_paths['radar'], caption="Health Snapshot", width=240)
+        st.image(chart_paths['trend'], caption="How Likelihood Changes With Age", width=380)
 
     st.write("---")
     st.subheader("Download Your Summary")
