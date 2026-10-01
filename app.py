@@ -39,29 +39,6 @@ div.stButton > button:hover {
     color: black;
     border: 3px solid #F39C12;
 }
-div[data-testid="stHorizontalBlock"] {
-    align-items: stretch;
-}
-div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-    display: flex;
-    flex-direction: column;
-}
-div[data-testid="column"] > div {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    height: 100%;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] > div {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] > div > div[data-testid="stVerticalBlock"] {
-    flex-grow: 1;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -103,7 +80,7 @@ if st.session_state['view'] == 'form':
     step1, step2, step3 = st.columns(3)
 
     with step1:
-        with st.container(border=True):
+        with st.container(border=True, height=820):
             st.subheader("Step 1: Required Info")
             st.caption("Yes/No answers, since guessing could mislead the result.")
             high_bp = st.radio("High blood pressure diagnosed by a doctor?", ["No", "Yes"])
@@ -115,7 +92,7 @@ if st.session_state['view'] == 'form':
             diabetes = st.selectbox("Do you have diabetes?", ["No", "Pre-diabetes/borderline", "Yes"])
 
     with step2:
-        with st.container(border=True):
+        with st.container(border=True, height=820):
             st.subheader("Step 2: About You")
             st.caption("If unsure about income/education, select 'Unsure'.")
             sex = st.radio("Sex", ["Female", "Male"])
@@ -134,7 +111,7 @@ if st.session_state['view'] == 'form':
             ])
 
     with step3:
-        with st.container(border=True):
+        with st.container(border=True, height=820):
             st.subheader("Step 3: Lifestyle")
             st.caption("These directly shape your recommendations.")
             smoker = st.radio(
@@ -166,7 +143,7 @@ if st.session_state['view'] == 'form':
     step4, step5 = st.columns(2)
 
     with step4:
-        with st.container(border=True):
+        with st.container(border=True, height=420):
             st.subheader("Step 4: Body Measurements")
             height_cm = st.number_input("Height (cm)", min_value=100, max_value=250, value=170)
             height_inches = height_cm / 2.54
@@ -178,7 +155,7 @@ if st.session_state['view'] == 'form':
             st.write(f"BMI: **{bmi_calculated:.1f}**")
 
     with step5:
-        with st.container(border=True):
+        with st.container(border=True, height=420):
             st.subheader("Step 5: Additional Health Info")
             gen_health = st.selectbox("Rate your general health", ["Excellent", "Very good", "Good", "Fair", "Poor"])
             with st.expander("What do these mean?"):
