@@ -28,7 +28,7 @@ div.stButton > button {
     color: black;
     font-weight: bold;
     border: 3px solid #4A9EFF;
-    padding: 12px;
+    padding: 10px 24px;
 }
 div.stButton > button:hover {
     background-color: #f0f0f0;
@@ -61,8 +61,17 @@ if st.session_state['view'] == 'form':
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("""
+    <div style='background-color:#3A2A00; border:2px solid #F39C12; border-radius:8px; padding:14px; margin-top:10px; margin-bottom:10px;'>
+        <span style='color:#FFD27F; font-weight:bold;'>⚠️ Disclaimer:</span>
+        <span style='color:#FFFFFF;'> This tool provides a dataset-based likelihood estimate only. It is not a medical diagnosis and does not replace advice from a qualified doctor. No data entered here is stored, transmitted, or saved; each result is calculated live in your browser session only. If you have concerns about your heart health, please speak to your GP.</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.write("---")
-    get_result_top = st.button("Get My Result", use_container_width=True, key="btn_top")
+    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 1])
+    with btn_col2:
+        get_result_top = st.button("Get My Result", key="btn_top")
     st.caption("Fill in the sections below, then click here (or the button at the bottom) when ready.")
     st.write("---")
 
@@ -74,9 +83,9 @@ if st.session_state['view'] == 'form':
             st.caption("Yes/No answers, since guessing could mislead the result.")
             high_bp = st.radio("High blood pressure diagnosed by a doctor?", ["No", "Yes"])
             high_chol = st.radio("High cholesterol diagnosed by a doctor?", ["No", "Yes"])
-            st.caption("Asks if a doctor EVER told you this, even years ago - may not reflect current level if not rechecked recently.")
+            st.caption("This question asks whether a doctor has ever told you this, even if it was many years ago. If you have not had a recent check, your answer may not reflect your current cholesterol level.")
             chol_check = st.radio("Cholesterol checked in the past 5 years?", ["No", "Yes"])
-            st.caption("Asks if you've had a test at all, regardless of result.")
+            st.caption("This question asks only whether you have had a cholesterol test at any point, regardless of what the result was.")
             stroke = st.radio("Ever told you had a stroke?", ["No", "Yes"])
             diabetes = st.selectbox("Do you have diabetes?", ["No", "Pre-diabetes/borderline", "Yes"])
 
@@ -153,14 +162,23 @@ if st.session_state['view'] == 'form':
                 st.caption("🟡 **Good**: A manageable condition may exist; most activities unaffected.")
                 st.caption("🟠 **Fair**: A condition limits some activities sometimes.")
                 st.caption("🔴 **Poor**: A condition limits activities most of the time.")
-            ment_hlth_days = st.number_input("Days mental health wasn't good (past 30)", min_value=0, max_value=30, value=0)
-            phys_hlth_days = st.number_input("Days physical health wasn't good (past 30)", min_value=0, max_value=30, value=0)
+
+            st.markdown("**Physical Health**")
+            st.caption("Only count days affected by conditions linked to cardiovascular health, such as: chest pain or pressure, shortness of breath, swelling in the legs, ankles, or feet, unusual fatigue, or an irregular heartbeat. Do not count unrelated issues such as a cold, flu, or minor injury.")
+            phys_hlth_days = st.number_input("In the past 30 days, how many days were affected by symptoms like these?", min_value=0, max_value=30, value=0)
+
+            st.markdown("**Mental Health**")
+            st.caption("Only count days affected by sustained stress, anxiety, or low mood, which are linked to cardiovascular health over time. Do not count a single difficult day or a brief reaction to one specific event.")
+            ment_hlth_days = st.number_input("In the past 30 days, how many days were affected by strain like this?", min_value=0, max_value=30, value=0)
+
             diff_walk = st.radio("Serious difficulty walking/climbing stairs?", ["No", "Yes"])
             st.caption("Includes cardiovascular causes (breathlessness from heart failure) and others (stroke weakness, arthritis, COPD).")
             any_healthcare = st.radio("Have health care coverage?", ["Yes", "No"])
             no_doc_cost = st.radio("Skipped a doctor visit due to cost (past year)?", ["No", "Yes"])
 
-    get_result_bottom = st.button("Get My Result", use_container_width=True, key="btn_bottom")
+    btn_col4, btn_col5, btn_col6 = st.columns([1, 1, 1])
+    with btn_col5:
+        get_result_bottom = st.button("Get My Result", key="btn_bottom")
 
     with st.expander("What do these terms mean?"):
         st.write("**Likelihood estimate**: How closely your profile matches patterns linked to heart disease in this dataset. This is not a diagnosis or a guaranteed future outcome.")
@@ -236,7 +254,7 @@ if st.session_state['view'] == 'form':
                 snapshot_colors.append(GREEN if val == 1 else RED)
             else:
                 snapshot_colors.append(RED if val == 1 else GREEN)
-        fig_snap, ax_snap = plt.subplots(figsize=(6, 3))
+        fig_snap, ax_snap = plt.subplots(figsize=(5, 2.6))
         fig_snap.patch.set_facecolor(BOX_BG)
         ax_snap.set_facecolor(BOX_BG)
         ax_snap.barh(snapshot_labels[::-1], [1]*8, color=snapshot_colors[::-1])
@@ -247,7 +265,7 @@ if st.session_state['view'] == 'form':
             spine.set_visible(False)
         plt.tight_layout()
 
-        fig_gauge, ax_gauge = plt.subplots(figsize=(3.6, 2.2), subplot_kw={'projection': 'polar'})
+        fig_gauge, ax_gauge = plt.subplots(figsize=(3.4, 2.1), subplot_kw={'projection': 'polar'})
         fig_gauge.patch.set_alpha(0)
         gauge_colors = [GREEN, AMBER, RED]
         bounds = [0, 0.10, 0.30, 1.0]
@@ -273,7 +291,7 @@ if st.session_state['view'] == 'form':
         chart_features = [f for f, v in top5_contributions][::-1]
         chart_values = [v for f, v in top5_contributions][::-1]
         chart_colors = [RED if v > 0 else GREEN for v in chart_values]
-        fig_bar, ax_bar = plt.subplots(figsize=(6, 2.8))
+        fig_bar, ax_bar = plt.subplots(figsize=(5, 2.6))
         fig_bar.patch.set_facecolor(BOX_BG)
         ax_bar.set_facecolor(BOX_BG)
         ax_bar.barh(chart_features, chart_values, color=chart_colors)
@@ -307,7 +325,7 @@ if st.session_state['view'] == 'form':
         if 18.5 <= bmi_calculated <= 24.9: good_factors.append('BMI_healthy')
         elif bmi_calculated > 24.9: candidate_risks.append('BMI_high')
 
-        fig_donut, ax_donut = plt.subplots(figsize=(3.2, 3.2))
+        fig_donut, ax_donut = plt.subplots(figsize=(2.8, 2.8))
         fig_donut.patch.set_facecolor(BOX_BG)
         n_good, n_risk = len(good_factors), len(candidate_risks)
         if n_good + n_risk > 0:
@@ -321,7 +339,7 @@ if st.session_state['view'] == 'form':
         radar_values_closed = radar_values + radar_values[:1]
         radar_angles = np.linspace(0, 2*np.pi, len(radar_categories), endpoint=False).tolist()
         radar_angles += radar_angles[:1]
-        fig_radar, ax_radar = plt.subplots(figsize=(3.2, 3.2), subplot_kw={'projection': 'polar'})
+        fig_radar, ax_radar = plt.subplots(figsize=(2.8, 2.8), subplot_kw={'projection': 'polar'})
         fig_radar.patch.set_facecolor(BOX_BG)
         ax_radar.set_facecolor(BOX_BG)
         ax_radar.plot(radar_angles, radar_values_closed, color=BLUE, linewidth=2)
@@ -339,7 +357,7 @@ if st.session_state['view'] == 'form':
             trend_row['Age'] = a
             trend_data = pd.DataFrame([trend_row])[X_train.columns]
             age_trend_values.append(model.predict_proba(trend_data)[0][1])
-        fig_trend, ax_trend = plt.subplots(figsize=(7, 2.8))
+        fig_trend, ax_trend = plt.subplots(figsize=(5.5, 2.6))
         fig_trend.patch.set_facecolor(BOX_BG)
         ax_trend.set_facecolor(BOX_BG)
         ax_trend.plot(range(1, 14), age_trend_values, color=BLUE, linewidth=2, marker='o', markersize=4)
@@ -448,9 +466,11 @@ if st.session_state['view'] == 'form':
 # RESULTS VIEW
 # ============================================================
 elif st.session_state['view'] == 'results':
-    if st.button("← Back to Form"):
-        st.session_state['view'] = 'form'
-        st.rerun()
+    btn_back1, btn_back2, btn_back3 = st.columns([1, 1, 1])
+    with btn_back2:
+        if st.button("← Back to Form"):
+            st.session_state['view'] = 'form'
+            st.rerun()
 
     risk_factors = st.session_state['risk_factors']
     good_factors = st.session_state['good_factors']
@@ -476,7 +496,7 @@ elif st.session_state['view'] == 'results':
         st.caption(f"Higher than {percentile:.0f}% of people in this dataset. Dataset-based estimate, not a clinical risk score.")
         st.write(f"BMI: **{bmi_calculated:.1f}** ({bmi_status})")
     with res_col2:
-        st.image(chart_paths['gauge'])
+        st.image(chart_paths['gauge'], use_container_width=True)
 
     st.write("---")
 
@@ -518,13 +538,13 @@ elif st.session_state['view'] == 'results':
 
     ch1, ch2 = st.columns(2)
     with ch1:
-        st.image(chart_paths['snapshot'], caption="Live Snapshot of Your Answers")
+        st.image(chart_paths['snapshot'], caption="Live Snapshot of Your Answers", use_container_width=True)
     with ch2:
-        st.image(chart_paths['bar'], caption="Top 5 Contributing Factors")
+        st.image(chart_paths['bar'], caption="Top 5 Contributing Factors", use_container_width=True)
 
     ch3, ch4 = st.columns(2)
     with ch3:
-        st.image(chart_paths['donut'], caption="Habits Breakdown")
+        st.image(chart_paths['donut'], caption="Habits Breakdown", use_container_width=True)
         list_col1, list_col2 = st.columns(2)
         with list_col1:
             st.markdown(f":green[**✅ Good ({len(good_factors)})**]")
@@ -538,8 +558,8 @@ elif st.session_state['view'] == 'results':
             else:
                 st.write("- None")
     with ch4:
-        st.image(chart_paths['radar'], caption="Health Snapshot")
-        st.image(chart_paths['trend'], caption="How Likelihood Changes With Age")
+        st.image(chart_paths['radar'], caption="Health Snapshot", use_container_width=True)
+        st.image(chart_paths['trend'], caption="How Likelihood Changes With Age", use_container_width=True)
 
     st.write("---")
     st.subheader("Download Your Summary")
