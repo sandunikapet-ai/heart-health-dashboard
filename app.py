@@ -333,23 +333,65 @@ if st.session_state['view'] == 'form':
             ax_donut.text(0, 0, f"{n_good}/{n_good+n_risk}\nHealthy", ha='center', va='center', color='white', fontsize=12, fontweight='bold')
         plt.tight_layout()
 
-        radar_categories = ['Activity', 'Fruits', 'Veggies', 'BP Health', 'Chol Health', 'Non-Smoker', 'Alcohol', 'BMI']
-        radar_values = [1 if phys_activity == "Yes" else 0, 1 if fruits == "Yes" else 0, 1 if veggies == "Yes" else 0,
-                         1 if high_bp == "No" else 0, 1 if high_chol == "No" else 0, 1 if smoker == "No" else 0,
-                         1 if hvy_alcohol == "No" else 0, 1 if 18.5 <= bmi_calculated <= 24.9 else 0]
-        radar_values_closed = radar_values + radar_values[:1]
-        radar_angles = np.linspace(0, 2*np.pi, len(radar_categories), endpoint=False).tolist()
-        radar_angles += radar_angles[:1]
-        fig_radar, ax_radar = plt.subplots(figsize=(2.6, 2.6), subplot_kw={'projection': 'polar'})
-        fig_radar.patch.set_facecolor(BOX_BG)
-        ax_radar.set_facecolor(BOX_BG)
-        ax_radar.plot(radar_angles, radar_values_closed, color=BLUE, linewidth=2)
-        ax_radar.fill(radar_angles, radar_values_closed, color=BLUE, alpha=0.35)
-        ax_radar.set_xticks(radar_angles[:-1])
-        ax_radar.set_xticklabels(radar_categories, color='white', size=8)
-        ax_radar.set_yticks([])
-        ax_radar.spines['polar'].set_color('white')
-        plt.tight_layout()
+        # ---- Current Health Scorecard (replaces the radar chart) ----
+        if activity_level == "High":
+            act_answer, act_level = "150+ min/week", 'good'
+        elif activity_level == "Moderate":
+            act_answer, act_level = "Some, under 150", 'some'
+        else:
+            act_answer, act_level = "None", 'bad'
+
+        fruit_level = 'good' if fruits_per_day >= 2 else ('some' if fruits_per_day >= 1 else 'bad')
+        veg_level = 'good' if veggies_per_day >= 5 else ('some' if veggies_per_day >= 1 else 'bad')
+
+        if 18.5 <= bmi_calculated <= 24.9:
+            bmi_level = 'good'
+        elif bmi_calculated < 18.5:
+            bmi_level = 'some'
+        else:
+            bmi_level = 'bad'
+
+        score_rows = [
+            ("Blood pressure", "High" if high_bp == "Yes" else "Not high", "Not high", 'bad' if high_bp == "Yes" else 'good'),
+            ("Cholesterol", "High" if high_chol == "Yes" else "Not high", "Not high", 'bad' if high_chol == "Yes" else 'good'),
+            ("Smoking (lifetime)", "100+ cigarettes" if smoker == "Yes" else "Never 100+", "Never 100+", 'bad' if smoker == "Yes" else 'good'),
+            ("Physical activity", act_answer, "150+ min/week", act_level),
+            ("Fruit", f"{fruits_per_day}/day", "2+/day", fruit_level),
+            ("Vegetables", f"{veggies_per_day}/day", "5+/day", veg_level),
+            ("Alcohol", "Heavy" if hvy_alcohol == "Yes" else "Not heavy", "Not heavy", 'bad' if hvy_alcohol == "Yes" else 'good'),
+            ("BMI", f"{bmi_calculated:.1f}", "18.5-24.9", bmi_level),
+        ]
+        level_colors = {'good': GREEN, 'some': AMBER, 'bad': RED}
+
+        n_rows = len(score_rows)
+        fig_score, ax_score = plt.subplots(figsize=(5.2, 3.6))
+        fig_score.patch.set_facecolor(BOX_BG)
+        ax_score.set_facecolor(BOX_BG)
+        ax_score.set_xlim(0, 10)
+        ax_score.set_ylim(-0.6, n_rows + 2)
+        ax_score.axis('off')
+
+        header_y = n_rows + 1.2
+        ax_score.text(0.1, header_y, 'Factor', color='#9DB7D5', fontsize=9, fontweight='bold', va='center')
+        ax_score.text(3.6, header_y, 'Your answer', color='#9DB7D5', fontsize=9, fontweight='bold', va='center')
+        ax_score.text(6.7, header_y, 'Healthy target', color='#9DB7D5', fontsize=9, fontweight='bold', va='center')
+        ax_score.plot([0, 10], [header_y - 0.55, header_y - 0.55], color='white', linewidth=0.8, alpha=0.6)
+
+        for i, (factor, answer, target, level) in enumerate(score_rows):
+            y = n_rows - i
+            ax_score.text(0.1, y, factor, color='white', fontsize=9, va='center')
+            ax_score.text(3.6, y, answer, color='white', fontsize=9, va='center', fontweight='bold')
+            ax_score.text(6.7, y, target, color='#C9D6E6', fontsize=9, va='center')
+            ax_score.scatter(9.5, y, s=110, color=level_colors[level], clip_on=False, zorder=3)
+            ax_score.plot([0, 10], [y - 0.5, y - 0.5], color='white', linewidth=0.4, alpha=0.2)
+
+        legend_y = -0.35
+        ax_score.scatter(0.3, legend_y, s=50, color=GREEN, clip_on=False)
+        ax_score.text(0.6, legend_y, 'Meets target', color='white', fontsize=8, va='center')
+        ax_score.scatter(3.6, legend_y, s=50, color=AMBER, clip_on=False)
+        ax_score.text(3.9, legend_y, 'Some, below target', color='white', fontsize=8, va='center')
+        ax_score.scatter(7.2, legend_y, s=50, color=RED, clip_on=False)
+        ax_score.text(7.5, legend_y, 'Needs improvement', color='white', fontsize=8, va='center')
 
         age_labels = ["18-24","25-29","30-34","35-39","40-44","45-49","50-54","55-59","60-64","65-69","70-74","75-79","80+"]
         age_trend_values = []
@@ -435,13 +477,13 @@ if st.session_state['view'] == 'form':
         gauge_path = os.path.join(temp_dir, 'gauge.png')
         bar_path = os.path.join(temp_dir, 'bar.png')
         donut_path = os.path.join(temp_dir, 'donut.png')
-        radar_path = os.path.join(temp_dir, 'radar.png')
+        score_path = os.path.join(temp_dir, 'scorecard.png')
         trend_path = os.path.join(temp_dir, 'trend.png')
         snap_path = os.path.join(temp_dir, 'snap.png')
         fig_gauge.savefig(gauge_path, dpi=150, bbox_inches='tight', facecolor='white')
         fig_bar.savefig(bar_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_donut.savefig(donut_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
-        fig_radar.savefig(radar_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
+        fig_score.savefig(score_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_trend.savefig(trend_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_snap.savefig(snap_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
 
@@ -459,7 +501,7 @@ if st.session_state['view'] == 'form':
         st.session_state['POSITIVE_MESSAGES'] = POSITIVE_MESSAGES
         st.session_state['good_factor_labels'] = good_factor_labels
         st.session_state['risk_factor_labels'] = risk_factor_labels
-        st.session_state['chart_paths'] = {'gauge': gauge_path, 'bar': bar_path, 'donut': donut_path, 'radar': radar_path, 'trend': trend_path, 'snapshot': snap_path}
+        st.session_state['chart_paths'] = {'gauge': gauge_path, 'bar': bar_path, 'donut': donut_path, 'scorecard': score_path, 'trend': trend_path, 'snapshot': snap_path}
         st.session_state['view'] = 'results'
         st.rerun()
 
@@ -557,7 +599,8 @@ elif st.session_state['view'] == 'results':
             else:
                 st.write("- None")
     with ch4:
-        st.image(chart_paths['radar'], caption="Health Snapshot", width=280)
+        st.image(chart_paths['scorecard'], caption="Your Current Health Scorecard", width=440)
+        st.caption("This shows where you stand today for each factor, compared with the healthy target. Green means the target is met, amber means some but below target, and red means it needs improvement.")
         st.image(chart_paths['trend'], caption="How Likelihood Changes With Age", width=440)
 
     st.write("---")
@@ -623,8 +666,9 @@ elif st.session_state['view'] == 'results':
     pdf.ln(3)
     pdf.image(chart_paths['bar'], x=25, w=160)
     pdf.ln(3)
-    pdf.image(chart_paths['donut'], x=15, w=85)
-    pdf.image(chart_paths['radar'], x=105, w=85)
+    pdf.image(chart_paths['donut'], x=60, w=85)
+    pdf.ln(3)
+    pdf.image(chart_paths['scorecard'], x=25, w=160)
     pdf.ln(3)
     pdf.image(chart_paths['trend'], x=25, w=160)
     pdf.ln(5)
