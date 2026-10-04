@@ -143,7 +143,7 @@ if st.session_state['view'] == 'form':
     step4, step5 = st.columns(2)
 
     with step4:
-        with st.container(border=True, height=420):
+        with st.container(border=True, height=960):
             st.subheader("Step 4: Body Measurements")
             height_cm = st.number_input("Height (cm)", min_value=100, max_value=250, value=170)
             height_inches = height_cm / 2.54
@@ -155,36 +155,53 @@ if st.session_state['view'] == 'form':
             st.write(f"BMI: **{bmi_calculated:.1f}**")
 
     with step5:
-        with st.container(border=True, height=420):
+        with st.container(border=True, height=960):
             st.subheader("Step 5: Additional Health Info")
-            gen_health = st.selectbox("Rate your general health", ["Excellent", "Very good", "Good", "Fair", "Poor"])
-            with st.expander("What do these mean?"):
-                st.caption("🟢 **Excellent**: No ongoing problems; full activity ability.")
-                st.caption("🟢 **Very good**: Minor, infrequent issues, no limits.")
-                st.caption("🟡 **Good**: A manageable condition may exist; most activities unaffected.")
-                st.caption("🟠 **Fair**: A condition limits some activities sometimes.")
-                st.caption("🔴 **Poor**: A condition limits activities most of the time.")
 
-            st.markdown("**Physical Health**")
-            st.caption("Only count days affected by conditions linked to cardiovascular health, such as: chest pain or pressure, shortness of breath, swelling in the legs, ankles, or feet, unusual fatigue, or an irregular heartbeat. Do not count unrelated issues such as a cold, flu, or minor injury.")
-            phys_hlth_days = st.number_input("In the past 30 days, how many days were affected by symptoms like these?", min_value=0, max_value=30, value=0)
+            gen_health = st.selectbox("How would you rate your general health overall?", ["Excellent", "Very good", "Good", "Fair", "Poor"])
+            with st.expander("What do these options mean?"):
+                st.caption("🟢 **Excellent**: You feel very well and have no ongoing health problems. You can do everything you want without limits. For example, you can climb two flights of stairs or walk briskly without getting out of breath.")
+                st.caption("🟢 **Very good**: You are generally well, with only small problems now and then that do not get in your way. For example, an occasional mild headache or sore back.")
+                st.caption("🟡 **Good**: You are doing fine overall, or you have a long-term condition that is well controlled. For example, high blood pressure that is treated with tablets and rarely affects your day.")
+                st.caption("🟠 **Fair**: You have a health problem that sometimes stops you doing normal things. For example, you get out of breath on the stairs on some days, or you need to rest during a walk.")
+                st.caption("🔴 **Poor**: You have health problems that limit what you can do on most days. For example, chest discomfort or breathlessness during simple tasks like getting dressed.")
+                st.caption("There is no official checklist for this question. Pick the option that feels closest to you, thinking about people your own age.")
 
-            st.markdown("**Mental Health**")
-            st.caption("Only count days affected by sustained stress, anxiety, or low mood, which are linked to cardiovascular health over time. Do not count a single difficult day or a brief reaction to one specific event.")
-            ment_hlth_days = st.number_input("In the past 30 days, how many days were affected by strain like this?", min_value=0, max_value=30, value=0)
+            st.markdown("**Physical Health: symptoms linked to the heart**")
+            st.caption("Think about the past 30 days and count each day you had heart-related symptoms, such as:")
+            st.caption("• Chest pain, tightness or pressure, for example when walking uphill.")
+            st.caption("• Getting out of breath more easily than usual, for example on one flight of stairs.")
+            st.caption("• Swelling in your ankles, feet or legs.")
+            st.caption("• A racing, pounding or irregular heartbeat.")
+            st.caption("• Feeling unusually tired or dizzy during normal activities.")
+            st.caption("Do not count problems that are not linked to the heart, such as a cold, the flu, a headache or a sprained ankle. Enter 0 if there were none.")
+            phys_hlth_days = st.number_input("How many of the past 30 days did you have heart-related symptoms?", min_value=0, max_value=30, value=0)
 
-            diff_walk = st.radio("Serious difficulty walking/climbing stairs?", ["No", "Yes"])
-            st.caption("Includes cardiovascular causes (breathlessness from heart failure) and others (stroke weakness, arthritis, COPD).")
-            any_healthcare = st.radio("Have health care coverage?", ["Yes", "No"])
-            no_doc_cost = st.radio("Skipped a doctor visit due to cost (past year)?", ["No", "Yes"])
+            st.markdown("**Mental Health: stress, anxiety or low mood**")
+            st.caption("Ongoing stress, anxiety and low mood are linked to a higher risk of heart problems over time. Think about the past 30 days and count each day you felt this way, for example:")
+            st.caption("• Feeling tense or on edge for most of the day.")
+            st.caption("• Worrying a lot about work, money or family.")
+            st.caption("• Feeling down, empty or hopeless.")
+            st.caption("• Sleeping badly because of worry.")
+            st.caption("Do not count a single bad day, or a short upset after one event such as an argument. Enter 0 if there were none.")
+            ment_hlth_days = st.number_input("How many of the past 30 days did you feel this way?", min_value=0, max_value=30, value=0)
+
+            diff_walk = st.radio("Do you have serious difficulty walking or climbing stairs?", ["No", "Yes"])
+            st.caption("Answer Yes if you often have to stop and rest, or cannot manage, when walking a short distance or climbing one flight of stairs. This can be caused by the heart (for example, breathlessness from heart failure or chest pain). It can also have other causes, such as weakness after a stroke, arthritis, or a long-term lung condition called COPD. It is asked because trouble walking can be linked to heart health.")
+
+            any_healthcare = st.radio("Do you have health insurance or other coverage that helps pay for doctor visits and treatment?", ["Yes", "No"])
+            st.caption("This includes private health insurance or any other plan that covers part of your health costs. It is asked because people who can easily see a doctor are more likely to have their blood pressure and cholesterol checked.")
+
+            no_doc_cost = st.radio("In the past year, was there a time you needed to see a doctor but did not go because of the cost?", ["No", "Yes"])
+            st.caption("For example, you put off a GP visit, a blood pressure check, or collecting a prescription. It is asked because missed checks can mean problems like high blood pressure go unnoticed.")
 
     get_result_bottom = st.button("Get My Result", key="btn_bottom")
 
     with st.expander("What do these terms mean?"):
-        st.write("**Likelihood estimate**: How closely your profile matches patterns linked to heart disease in this dataset. This is not a diagnosis or a guaranteed future outcome.")
-        st.write("**Contributing factor**: Shows which of your answers had the biggest effect on your result, and whether each one pushed it up or down.")
-        st.write("**Illustrative model scenario**: A 'what-if' example showing how the estimate would change if one factor changed. It reflects patterns in the data, not a promise about your real health.")
-        st.write("**Percentile**: Shows where your result sits compared to everyone else in this dataset, not a clinical category.")
+        st.write("**Likelihood estimate**: A percentage showing how often people with answers similar to yours, in a large health survey, have had heart disease or a heart attack. It is not a diagnosis, and it does not predict what will happen to you.")
+        st.write("**Contributing factor**: One of your answers that had a big effect on your result. It either pushed your estimate up or pulled it down. For example, having high blood pressure may push it up.")
+        st.write("**Illustrative model scenario**: A 'what if' example showing how your estimate would change if one answer were different, for example if you became more active. It shows patterns in the data, not a promise about your health.")
+        st.write("**Percentile**: Shows how you compare with everyone in the dataset. If you are at the 70th percentile, your estimate is higher than that of 70% of people in the dataset. It is not a medical category.")
 
     get_result = get_result_top or get_result_bottom
 
@@ -333,7 +350,7 @@ if st.session_state['view'] == 'form':
             ax_donut.text(0, 0, f"{n_good}/{n_good+n_risk}\nHealthy", ha='center', va='center', color='white', fontsize=12, fontweight='bold')
         plt.tight_layout()
 
-        # ---- Current Health Scorecard (replaces the radar chart) ----
+        # ---- Current Health Scorecard ----
         if activity_level == "High":
             act_answer, act_level = "150+ min/week", 'good'
         elif activity_level == "Moderate":
