@@ -282,18 +282,22 @@ if st.session_state['view'] == 'form':
             spine.set_visible(False)
         plt.tight_layout()
 
+        # ---- Speedometer gauge (arc on top, green left, red right) ----
         fig_gauge, ax_gauge = plt.subplots(figsize=(3.2, 2.0), subplot_kw={'projection': 'polar'})
         fig_gauge.patch.set_alpha(0)
         gauge_colors = [GREEN, AMBER, RED]
         bounds = [0, 0.10, 0.30, 1.0]
         for i in range(3):
-            theta1 = np.pi * (1 - bounds[i])
-            theta2 = np.pi * (1 - bounds[i+1])
-            ax_gauge.bar(x=(theta1+theta2)/2, height=1, width=abs(theta1-theta2), bottom=2, color=gauge_colors[i], edgecolor=BOX_BG, linewidth=2)
-        needle_angle = np.pi * (1 - likelihood)
-        ax_gauge.plot([needle_angle, needle_angle], [0, 2.3], color='white', linewidth=3)
+            theta1 = np.pi * bounds[i]
+            theta2 = np.pi * bounds[i+1]
+            ax_gauge.bar(x=(theta1+theta2)/2, height=1, width=theta2-theta1, bottom=2, color=gauge_colors[i], edgecolor='white', linewidth=2)
+        needle_angle = np.pi * likelihood
+        ax_gauge.plot([needle_angle, needle_angle], [0, 2.6], color='#0A1628', linewidth=3, solid_capstyle='round')
+        ax_gauge.scatter([0], [0], s=90, color='#0A1628', zorder=5)
+        for b in bounds:
+            ax_gauge.text(np.pi * b, 3.35, f"{round(b*100)}%", ha='center', va='center', fontsize=7, color='#0A1628')
         ax_gauge.set_theta_zero_location('W')
-        ax_gauge.set_theta_direction(1)
+        ax_gauge.set_theta_direction(-1)
         ax_gauge.set_thetamin(0)
         ax_gauge.set_thetamax(180)
         ax_gauge.set_ylim(0, 3)
