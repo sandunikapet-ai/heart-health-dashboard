@@ -7,6 +7,7 @@ import shap
 from fpdf import FPDF
 import tempfile
 import os
+from llm_explainer import pick_evidence, get_ai_explanation, render_sources
 
 st.set_page_config(
     page_title="Heart Health Dashboard",
@@ -68,7 +69,7 @@ if st.session_state['view'] == 'form':
     st.markdown("""
     <div style='background-color:#3A2A00; border:2px solid #F39C12; border-radius:8px; padding:14px; margin-top:10px; margin-bottom:10px;'>
         <span style='color:#FFD27F; font-weight:bold;'>⚠️ Disclaimer:</span>
-        <span style='color:#FFFFFF;'> This tool provides a dataset-based likelihood estimate only. It is not a medical diagnosis and does not replace advice from a qualified doctor. No data entered here is stored, transmitted, or saved; each result is calculated live in your browser session only. If you have concerns about your heart health, please speak to your GP.</span>
+        <span style='color:#FFFFFF;'> This tool provides a dataset-based likelihood estimate only. It is not a medical diagnosis and does not replace advice from a qualified doctor. Your result is calculated live in your session and nothing you enter is saved by this tool. If you choose the optional AI explanation on the results page, a short anonymous summary of your answers (no name, income or education) is sent to an AI service to write the explanation. If you have concerns about your heart health, please speak to your GP.</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -508,6 +509,28 @@ if st.session_state['view'] == 'form':
         fig_trend.savefig(trend_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_snap.savefig(snap_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
 
+        # ---- Data for the optional AI explanation ----
+        bmi_band = "healthy range" if 18.5 <= bmi_calculated <= 24.9 else ("below healthy range" if bmi_calculated < 18.5 else "above healthy range")
+        supportive_flags = []
+        if chol_check == "No": supportive_flags.append('CholCheck')
+        if no_doc_cost == "Yes": supportive_flags.append('NoDocbcCost')
+        if stroke == "Yes" or diabetes != "No" or diff_walk == "Yes": supportive_flags.append('Managed')
+        st.session_state['ai_summary'] = {
+            'likelihood_pct': likelihood * 100,
+            'tier': tier_label.split(' ', 1)[1].title(),
+            'top_factors': [(f, float(v)) for f, v in top5_contributions],
+            'answers': {
+                'age group': age_group, 'high blood pressure (doctor told)': high_bp,
+                'high cholesterol (doctor told)': high_chol, 'ever smoked 100+ cigarettes': smoker,
+                'physical activity level': activity_level, 'fruit servings per day': fruits_per_day,
+                'vegetable servings per day': veggies_per_day, 'heavy alcohol': hvy_alcohol,
+                'BMI band': bmi_band, 'diabetes': diabetes, 'stroke history': stroke,
+                'general health': gen_health,
+            },
+        }
+        st.session_state['ai_evidence_ids'] = pick_evidence(candidate_risks, supportive_flags)
+        st.session_state.pop('ai_result', None)
+
         st.session_state['risk_factors'] = risk_factors
         st.session_state['good_factors'] = good_factors
         st.session_state['candidate_risks'] = candidate_risks
@@ -595,6 +618,28 @@ elif st.session_state['view'] == 'results':
         for note in supportive_notes:
             st.write(f"- {note}")
 
+    # ---- Optional AI explanation ----
+    st.write("---")
+    st.subheader("🤖 Deeper AI Explanation (optional)")
+    st.caption("An AI writes a plain-English explanation of your result, using only the reviewed NZ guideline snippets in this tool. "
+               "It is AI-generated, can make mistakes, and is not medical advice. Your recommendations above stay the same.")
+    ai_consent = st.checkbox("I agree to send a short anonymous summary of my answers (no name, income or education) to an AI service for this explanation.")
+    if st.button("Explain my result in more detail", disabled=not ai_consent, key="btn_ai"):
+        with st.spinner("Writing your explanation..."):
+            st.session_state['ai_result'] = get_ai_explanation(
+                st.session_state['ai_summary'], st.session_state['ai_evidence_ids'], secrets=st.secrets)
+    ai_result = st.session_state.get('ai_result')
+    ai_pdf_text, ai_pdf_sources = None, []
+    if ai_result:
+        if ai_result['ok']:
+            shown, ai_pdf_sources = render_sources(ai_result['text'], st.session_state['ai_evidence_ids'])
+            st.info("AI-generated explanation. Not medical advice. Please check with your GP.")
+            st.write(shown)
+            st.caption("Sources used: " + "; ".join(ai_pdf_sources))
+            ai_pdf_text = shown
+        else:
+            st.warning(ai_result['reason'] + " The recommendations above are still your guide.")
+
     st.write("---")
     st.subheader("Charts")
 
@@ -675,6 +720,18 @@ elif st.session_state['view'] == 'results':
             pdf.set_x(15)
             pdf.multi_cell(0, 5, clean_text(f"- {POSITIVE_MESSAGES[feature]}"))
     pdf.ln(4)
+
+    if ai_pdf_text:
+        pdf.ln(4)
+        pdf.set_x(15)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.multi_cell(0, 8, "AI-generated explanation (not medical advice)")
+        pdf.set_x(15)
+        pdf.set_font("Helvetica", "", 10)
+        pdf.multi_cell(0, 5, clean_text(ai_pdf_text))
+        pdf.set_x(15)
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.multi_cell(0, 5, clean_text("Sources: " + "; ".join(ai_pdf_sources)))
 
     pdf.add_page()
     pdf.set_x(15)
