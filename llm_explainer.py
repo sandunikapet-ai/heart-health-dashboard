@@ -87,6 +87,29 @@ FACTOR_ANSWER_KEYS = {
 }
 
 
+def _answer_quality(f, val):
+    """Return 'unhealthy', 'healthy' or None for the person's answer (simple, conservative rules)."""
+    if val is None:
+        return None
+    v = str(val)
+    if f == "PhysActivity":
+        return "unhealthy" if v == "Low" else ("healthy" if v == "High" else None)
+    if f in ("Fruits", "Veggies"):
+        try:
+            return "unhealthy" if float(v) == 0 else None
+        except ValueError:
+            return None
+    if f == "CholCheck":
+        return "unhealthy" if v == "No" else "healthy"
+    if f == "Diabetes":
+        return "healthy" if v == "No" else "unhealthy"
+    if f == "GenHlth":
+        return "unhealthy" if v in ("Fair", "Poor") else "healthy"
+    if f in ("Smoker", "HighBP", "HighChol", "Stroke", "HvyAlcoholConsump", "DiffWalk", "NoDocbcCost"):
+        return "unhealthy" if v == "Yes" else "healthy"
+    return None
+
+
 def _factor_lines(summary):
     """One line per top factor: name, the person's answer (if shared), direction and strength."""
     factors = summary["top_factors"]
@@ -100,7 +123,14 @@ def _factor_lines(summary):
         ratio = abs(v) / biggest
         strength = "strongest effect" if ratio >= 0.999 else ("clear effect" if ratio >= 0.4 else "small effect")
         direction = "PUSHED the estimate UP" if v > 0 else "PULLED the estimate DOWN"
-        lines.append(f"- {FEATURE_NAMES.get(f, f)} ({shown}): {direction}, {strength}")
+        q = _answer_quality(f, val)
+        note = ""
+        if q == "unhealthy" and v < 0:
+            note = (" [NOTE: this answer is NOT healthy, even though it lowered the estimate. "
+                    "Say clearly it does NOT make this habit or condition good or protective, and that the person should still look after it.]")
+        elif q == "healthy" and v > 0:
+            note = (" [NOTE: this answer is healthy. Say it is still good for the heart; the estimate is only rough.]")
+        lines.append(f"- {FEATURE_NAMES.get(f, f)} ({shown}): {direction}, {strength}{note}")
     return "\n".join(lines)
 
 
@@ -122,7 +152,7 @@ def build_prompt(summary, evidence_ids):
         "say it was one of the things that raised (UP) or lowered (DOWN) their estimate the most; "
         "then explain in real-world terms what this factor is, how it affects the heart and blood vessels, and why it matters. "
         "If it is something a person cannot change (age, sex, past stroke) say so kindly and say it is best looked after with their GP. "
-        "If a factor lowered the estimate but is not a healthy habit (for example not having had a cholesterol check), say it does NOT mean it is healthy. "
+        "Follow any [NOTE] on a factor exactly. NEVER say an unhealthy habit (low activity, no fruit or vegetables, smoking, no cholesterol check) protects the person or is good for them. "
         "No [E] tags in this section.\n"
         "**Ideas from NZ guidelines** - use ONLY the numbered EVIDENCE. Every sentence must end with its evidence id in square brackets, e.g. [E1]. "
         "Link each idea to the person's answers. If there is no EVIDENCE write: 'No extra guideline ideas apply from your answers.' with no tag.\n"
