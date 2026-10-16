@@ -210,7 +210,14 @@ def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=No
             return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason})."}
         return {"ok": True, "text": text, "reason": "ok"}
     except Exception as e:
-        return {"ok": False, "text": "", "reason": f"AI explanation unavailable ({type(e).__name__})."}
+        resp_obj = getattr(e, "response", None)
+        code = getattr(resp_obj, "status_code", "")
+        detail = ""
+        try:
+            detail = resp_obj.text[:200]
+        except Exception:
+            pass
+        return {"ok": False, "text": "", "reason": f"AI explanation unavailable ({type(e).__name__} {code}) {detail}"}
 
 
 def render_sources(text, evidence_ids):
