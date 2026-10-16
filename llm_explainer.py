@@ -13,7 +13,7 @@ import os
 import re
 
 DEFAULT_MODEL = "claude-sonnet-5-5"   # Claude (paid). Change in secrets: LLM_MODEL
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"   # Groq (free tier). Change in secrets: GROQ_MODEL
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"   # Groq (free tier). Change in secrets: GROQ_MODEL
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"   # Gemini (free tier). Change in secrets: GEMINI_MODEL
 
 # ------------------------------------------------------------------
@@ -151,13 +151,15 @@ def _call_groq(key, model, system, user, http=None):
     """Groq API (OpenAI-compatible, free tier). Plain HTTPS via requests."""
     if http is None:
         import requests as http
+    payload = {"model": model, "temperature": 0.2, "max_tokens": 2000,
+               "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    if "gpt-oss" in model:
+        payload["reasoning_effort"] = "low"   # thinking models: keep thinking short so the answer is not cut off
     r = http.post("https://api.groq.com/openai/v1/chat/completions",
                   headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                  json={"model": model, "temperature": 0.2, "max_tokens": 500,
-                        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
-                  timeout=40)
+                  json=payload, timeout=60)
     r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"].strip()
+    return (r.json()["choices"][0]["message"].get("content") or "").strip()
 
 
 def _call_gemini(key, model, system, user, http=None):
@@ -207,7 +209,7 @@ def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=No
             text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
         ok, reason = validate(text, evidence_ids, summary)
         if not ok:
-            return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason})."}
+            return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason}). Start of reply: {text[:150]!r}"}
         return {"ok": True, "text": text, "reason": "ok"}
     except Exception as e:
         resp_obj = getattr(e, "response", None)
