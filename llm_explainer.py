@@ -4,8 +4,8 @@ Optional "Deeper AI explanation" for the Heart Health Dashboard.
 
 How it stays safe (RAG = retrieval-augmented generation):
   1. The rule-based engine and the EBM/SHAP model stay the base. The AI only EXPLAINS them.
-  2. Factor explanations come from the model (no guideline tag). Advice may only use the numbered evidence snippets (E1, E2, ...).
-  3. Every advice point must cite an evidence id. Unknown-id / uncited / invented-number replies are rejected.
+  2. The AI may only use the numbered evidence snippets below (E1, E2, ...).
+  3. Every point must cite an evidence id. Uncited / unknown-id / invented-number replies are rejected.
   4. If the API is off, fails, or the reply fails the checks, the app shows the normal rule-based text.
   5. Only a short, anonymous summary is sent (no name, no income, no education, no exact weight/height).
 """
@@ -111,26 +111,33 @@ def build_prompt(summary, evidence_ids):
     answers = "\n".join(f"- {k}: {v}" for k, v in summary["answers"].items())
     system = (
         "You explain results from a heart-health AWARENESS tool to a member of the public in New Zealand, "
-        "in simple, kind, plain English (reading age about 12). You are NOT a doctor.\n"
-        "Write exactly four sections, each title on its own line in bold exactly as shown:\n"
-        "**What your result means** - 2 to 3 sentences. Explain that the estimate is how common heart disease was among people with similar answers in a large health survey, "
-        "what the tier (lower / moderate / higher) means, and that it is not a diagnosis or a prediction. No [E] tags here.\n"
-        "**Why you got this result** - one bullet for EACH top factor. Start each bullet with 'In this model,'. "
-        "Name the factor, say the person's answer (only if it is shown), say whether it pulled the estimate DOWN or pushed it UP, and how strong it was. "
-        "Explain in plain words: 'down' means that, compared with the average person in the survey, answers like this were linked to fewer heart-disease cases, so it lowered the estimate; 'up' means more cases, so it raised the estimate. "
-        "IMPORTANT: if a factor lowered the estimate but the answer is not a healthy habit (for example not having had a cholesterol check, or sex), say clearly this is a pattern in the data and does NOT mean the answer is healthy or protective. "
-        "Say once that these are patterns in survey data, not proof of cause. No [E] tags here.\n"
-        "**What you can do** - Use ONLY the numbered EVIDENCE for advice. Every advice sentence must end with its evidence id in square brackets, e.g. [E1]. "
-        "Link each piece of advice to the person's answers where you can. "
-        "If there is no EVIDENCE, write: 'No extra suggestions apply from your answers. Keep up your healthy habits.' with no tag.\n"
-        "**Questions to ask your GP** - 2 to 3 short, general questions the person could ask (about their result, regular check-ups, or things in their answers). No new medical facts, no [E] tags.\n"
+        "in simple, kind, plain English (reading age about 12). You are NOT a doctor. The reader knows you are an AI and should not trust you 100%, "
+        "so be genuinely helpful and practical, not vague.\n"
+        "IMPORTANT: Do NOT mention datasets, surveys, models, data patterns, SHAP or how the estimate was calculated. "
+        "Explain everything using general, real-world heart-health knowledge, like a friendly health educator would.\n"
+        "Write exactly five sections, each title on its own line in bold exactly as shown:\n"
+        "**What your result means** - 2 to 3 sentences: the tool gives an awareness estimate (lower / moderate / higher) based on the person's answers; "
+        "say what that level means in simple words; it is not a diagnosis and the best next step is a chat with a GP.\n"
+        "**What stood out in your answers** - one short paragraph or bullet for EACH top factor. For each: name it and the person's answer (only if shown); "
+        "say it was one of the things that raised (UP) or lowered (DOWN) their estimate the most; "
+        "then explain in real-world terms what this factor is, how it affects the heart and blood vessels, and why it matters. "
+        "If it is something a person cannot change (age, sex, past stroke) say so kindly and say it is best looked after with their GP. "
+        "If a factor lowered the estimate but is not a healthy habit (for example not having had a cholesterol check), say it does NOT mean it is healthy. "
+        "No [E] tags in this section.\n"
+        "**Ideas from NZ guidelines** - use ONLY the numbered EVIDENCE. Every sentence must end with its evidence id in square brackets, e.g. [E1]. "
+        "Link each idea to the person's answers. If there is no EVIDENCE write: 'No extra guideline ideas apply from your answers.' with no tag.\n"
+        "**More ideas (AI general knowledge)** - 3 to 4 practical, safe, everyday ideas that fit THIS person's answers and top factors "
+        "(for example simple food swaps, building walking into the day, sleep, managing stress, keeping up regular check-ups). "
+        "No numbers or percentages here. No [E] tags here.\n"
+        "**Questions to ask your GP** - 2 to 3 short questions tailored to the person's answers. No [E] tags.\n"
         "RULES:\n"
         "0. NEVER state or guess a value for the person unless it appears in the factor list or PERSON'S ANSWERS.\n"
-        "1. Never diagnose. Never say a change will lower their risk by any amount.\n"
-        "2. Never give new numbers. Only use numbers that appear in the EVIDENCE, the RESULT or the person's answers.\n"
-        "3. Do not add health facts that are not in the EVIDENCE. If something is not covered, say 'This tool does not have guidance on that. Please ask your GP.'\n"
-        "4. Be respectful and non-judgemental. Do not blame the person.\n"
-        "5. Max 380 words. Do not add a closing disclaimer (the app adds one)."
+        "1. Never diagnose. Never promise a result. Never say a change will lower their risk by any amount.\n"
+        "2. Never give percentages or statistics. Numbers only from the EVIDENCE, the RESULT or the person's answers.\n"
+        "3. Never mention medicines, doses, supplements or stopping/starting any treatment. Say to ask the GP about that.\n"
+        "4. If the person has a stroke history, diabetes, or difficulty walking, say ongoing care is best led by their GP or health team.\n"
+        "5. Be respectful and non-judgemental. Do not blame the person.\n"
+        "6. Max 450 words. Do not add an urgent-help message or a closing disclaimer (the app adds them)."
     )
     user = (
         f"RESULT\n- Likelihood estimate: {summary['likelihood_pct']:.1f}% ({summary['tier']})\n\n"
@@ -145,14 +152,33 @@ def _numbers(text):
     return set(re.findall(r"\d+(?:\.\d+)?", text))
 
 
+GUIDE_HEAD = re.compile(r"ideas from nz guidelines", re.I)
+MORE_HEAD = re.compile(r"more ideas \(ai general knowledge\)", re.I)
+MED_WORDS = re.compile(r"\b(aspirin|statins?|metformin|insulin|warfarin|dose|doses|dosage|mg|tablets?|pills?|supplements?|stop taking|start taking|prescri\w*)\b", re.I)
+
+
+def sanitize_tags(reply):
+    """Guideline tags [E#] are only valid inside 'Ideas from NZ guidelines'. Remove them anywhere else."""
+    g = GUIDE_HEAD.search(reply)
+    if not g:
+        return re.sub(r"\s*\[E\d+\]", "", reply)
+    m = MORE_HEAD.search(reply, g.end())
+    end = m.start() if m else len(reply)
+    before, mid, after = reply[:g.end()], reply[g.end():end], reply[end:]
+    strip = lambda t: re.sub(r"\s*\[E\d+\]", "", t)
+    return strip(before) + mid + strip(after)
+
+
 def validate(reply, evidence_ids, summary):
-    """Return (ok, reason). Rejects unknown citations, missing citations, invented numbers."""
+    """Return (ok, reason). Rejects unknown/missing citations, invented numbers, medicine talk."""
     advice = _advice_ids(evidence_ids)
     cited = set(re.findall(r"\[(E\d+)\]", reply))
     if not cited.issubset(set(advice)):
         return False, "unknown evidence id"
     if advice and not cited:
         return False, "no citations"
+    if MED_WORDS.search(reply):
+        return False, "mentions medicines or doses"
     allowed = set()
     for i in advice:
         allowed |= _numbers(EVIDENCE[i]["text"])
@@ -162,12 +188,14 @@ def validate(reply, evidence_ids, summary):
     body = re.sub(r"\[E\d+\]", "", reply)
     # list numbers like "1." or "2)" at the start of a line are not health figures
     body = re.sub(r"(?m)^\s*(?:[-*]\s*)?\d+[.)]\s+", "", body)
-    # 1) Advice part (after "What you can do"): every number must come from the evidence / result / answers
-    m = re.search(r"what you can do", body, re.I)
-    advice_part = body[m.end():] if m else body
-    extra = _numbers(advice_part) - allowed
-    if extra:
-        return False, f"numbers not in evidence: {sorted(extra)}"
+    # 1) Only inside "Ideas from NZ guidelines": every number must come from the evidence / result / answers
+    m = GUIDE_HEAD.search(body)
+    if m:
+        m2 = MORE_HEAD.search(body, m.end())
+        gpart = body[m.end(): m2.start() if m2 else len(body)]
+        extra = _numbers(gpart) - allowed
+        if extra:
+            return False, f"numbers not in evidence: {sorted(extra)}"
     # 2) Whole reply: no invented percentages
     pct_extra = {n for n in re.findall(r"(\d+(?:\.\d+)?)\s*%", body)} - allowed
     if pct_extra:
@@ -222,7 +250,7 @@ def _call_gemini(key, model, system, user, http=None):
     body = {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1200},
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1500},
     }
     r = http.post(url, headers={"x-goog-api-key": key, "Content-Type": "application/json"}, json=body, timeout=40)
     r.raise_for_status()
@@ -230,10 +258,14 @@ def _call_gemini(key, model, system, user, http=None):
     return "".join(p.get("text", "") for p in parts).strip()
 
 
-LABEL_FACTORS = "*Source: this tool's model (SHAP). These are patterns in survey data, not guidelines.*"
+LABEL_MEANING = "*Source: your answers and this tool's estimate.*"
+LABEL_FACTORS = "*Source: AI general knowledge about each factor. It may contain mistakes.*"
 LABEL_ADVICE = "*Source: NZ guidelines, shown after each point.*"
-LABEL_MEANING = "*Source: this tool's model and your answers.*"
+LABEL_MORE = "*AI general knowledge, not from a guideline source. It may contain mistakes.*"
 LABEL_GP = "*General questions only, not medical advice.*"
+URGENT_NOTE = ("**When to get help**\n"
+               "*If you have chest pain or pressure, trouble breathing, sudden weakness or numbness, trouble speaking, or feel very unwell, "
+               "call 111 now. For other health questions you can call Healthline free on 0800 611 116.*")
 
 
 def add_section_labels(text):
@@ -242,13 +274,15 @@ def add_section_labels(text):
     for line in text.split("\n"):
         out.append(line)
         low = line.lower()
-        if len(line) < 60:
+        if len(line) < 70:
             if "what your result means" in low:
                 out.append(LABEL_MEANING)
-            elif "why you got this result" in low:
+            elif "what stood out in your answers" in low:
                 out.append(LABEL_FACTORS)
-            elif "what you can do" in low:
+            elif "ideas from nz guidelines" in low:
                 out.append(LABEL_ADVICE)
+            elif "more ideas (ai general knowledge)" in low:
+                out.append(LABEL_MORE)
             elif "questions to ask your gp" in low:
                 out.append(LABEL_GP)
     return "\n".join(out)
@@ -279,14 +313,16 @@ def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=No
                 client = anthropic.Anthropic(api_key=key)
             model = os.environ.get("LLM_MODEL") or _secret(secrets, "LLM_MODEL") or DEFAULT_MODEL
             resp = client.messages.create(
-                model=model, max_tokens=900, temperature=0.2,
+                model=model, max_tokens=1200, temperature=0.2,
                 system=system, messages=[{"role": "user", "content": user}],
             )
             text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
+        text = sanitize_tags(text)
         ok, reason = validate(text, evidence_ids, summary)
         if not ok:
             return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason}). Start of reply: {text[:150]!r}"}
         text = add_section_labels(text)
+        text += "\n\n" + URGENT_NOTE
         text += "\n\n*" + EVIDENCE["E12"]["text"] + "*"
         return {"ok": True, "text": text, "reason": "ok"}
     except Exception as e:
