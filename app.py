@@ -526,6 +526,9 @@ if st.session_state['view'] == 'form':
                 'vegetable servings per day': veggies_per_day, 'heavy alcohol': hvy_alcohol,
                 'BMI band': bmi_band, 'diabetes': diabetes, 'stroke history': stroke,
                 'general health': gen_health,
+                'sex': sex, 'cholesterol checked in past 5 years': chol_check,
+                'serious difficulty walking': diff_walk,
+                'cost stopped a doctor visit in past year': no_doc_cost,
             },
         }
         st.session_state['ai_evidence_ids'] = pick_evidence(candidate_risks, supportive_flags)
