@@ -4,8 +4,8 @@ Optional "Deeper AI explanation" for the Heart Health Dashboard.
 
 How it stays safe (RAG = retrieval-augmented generation):
   1. The rule-based engine and the EBM/SHAP model stay the base. The AI only EXPLAINS them.
-  2. The AI may only use the numbered evidence snippets below (E1, E2, ...).
-  3. Every point must cite an evidence id. Uncited / unknown-id / invented-number replies are rejected.
+  2. Factor explanations come from the model (no guideline tag). Advice may only use the numbered evidence snippets (E1, E2, ...).
+  3. Every advice point must cite an evidence id. Unknown-id / uncited / invented-number replies are rejected.
   4. If the API is off, fails, or the reply fails the checks, the app shows the normal rule-based text.
   5. Only a short, anonymous summary is sent (no name, no income, no education, no exact weight/height).
 """
@@ -72,7 +72,13 @@ def pick_evidence(candidate_risks, supportive_flags):
     return ids
 
 
+def _advice_ids(evidence_ids):
+    """Guideline snippets the AI may cite. E12 (general disclaimer) is added by the app, not cited by the AI."""
+    return [i for i in evidence_ids if i != "E12"]
+
+
 def build_prompt(summary, evidence_ids):
+    evidence_ids = _advice_ids(evidence_ids)
     ev = "\n".join(f"[{i}] ({EVIDENCE[i]['source']}) {EVIDENCE[i]['text']}" for i in evidence_ids)
     top = "\n".join(f"- {FEATURE_NAMES.get(f, f)}: {'pushed the estimate UP' if v > 0 else 'pulled the estimate DOWN'}"
                     for f, v in summary["top_factors"])
@@ -80,23 +86,24 @@ def build_prompt(summary, evidence_ids):
     system = (
         "You explain results from a heart-health AWARENESS tool to a member of the public in New Zealand, "
         "in simple, kind, plain English (reading age about 12). You are NOT a doctor.\n"
+        "Write exactly two short sections:\n"
+        "SECTION 1: 'Why you got this result'. 2 to 4 short bullets about the TOP FACTORS only. "
+        "Start each bullet with 'In this model,'. These come from the model, NOT from guidelines, so do NOT put any [E] tag in this section. "
+        "Say the factors are patterns in survey data, not proof of cause.\n"
+        "SECTION 2: 'What you can do'. Use ONLY the numbered EVIDENCE for advice. Every advice sentence must end with its evidence id in square brackets, e.g. [E1]. "
+        "If there is no EVIDENCE, write one line: 'No extra suggestions apply from your answers. Keep up your healthy habits.' with no tag.\n"
         "RULES:\n"
-        "1. Use ONLY the numbered EVIDENCE below for any health guidance. Do not use outside knowledge.\n"
-        "2. Every guidance sentence must end with its evidence id in square brackets, e.g. [E1].\n"
-        "3. Explain why the top factors mattered for THIS result, using only the factor list given.\n"
-        "4. Never diagnose. Never say a change will lower their risk by any amount. Never give new numbers "
-        "(only numbers that appear in the EVIDENCE or the RESULT).\n"
-        "5. If something is not covered by the evidence, say 'This tool does not have guidance on that. "
-        "Please ask your GP.'\n"
-        "6. The factors are patterns in survey data, not proof of cause.\n"
-        "7. Be respectful and non-judgemental. Do not blame the person.\n"
-        "8. Max 220 words. Use short paragraphs or bullets. End with a line suggesting they talk to their GP."
+        "1. Never diagnose. Never say a change will lower their risk by any amount.\n"
+        "2. Never give new numbers. Only use numbers that appear in the EVIDENCE, the RESULT or the person's answers.\n"
+        "3. If something is not covered by the evidence, say 'This tool does not have guidance on that. Please ask your GP.'\n"
+        "4. Be respectful and non-judgemental. Do not blame the person.\n"
+        "5. Max 220 words. Do not add a closing disclaimer (the app adds one)."
     )
     user = (
         f"RESULT\n- Likelihood estimate: {summary['likelihood_pct']:.1f}% ({summary['tier']})\n\n"
         f"TOP FACTORS FROM THE MODEL (SHAP)\n{top}\n\n"
         f"PERSON'S ANSWERS (anonymous)\n{answers}\n\n"
-        f"EVIDENCE\n{ev}\n"
+        f"EVIDENCE\n{ev if ev else '(none)'}\n"
     )
     return system, user
 
@@ -106,14 +113,15 @@ def _numbers(text):
 
 
 def validate(reply, evidence_ids, summary):
-    """Return (ok, reason). Rejects unknown citations, uncited guidance, invented numbers."""
+    """Return (ok, reason). Rejects unknown citations, missing citations, invented numbers."""
+    advice = _advice_ids(evidence_ids)
     cited = set(re.findall(r"\[(E\d+)\]", reply))
-    if not cited:
-        return False, "no citations"
-    if not cited.issubset(set(evidence_ids)):
+    if not cited.issubset(set(advice)):
         return False, "unknown evidence id"
+    if advice and not cited:
+        return False, "no citations"
     allowed = set()
-    for i in evidence_ids:
+    for i in advice:
         allowed |= _numbers(EVIDENCE[i]["text"])
     allowed |= _numbers(f"{summary['likelihood_pct']:.1f} {summary['likelihood_pct']:.0f}")
     # numbers from the person's own answers (e.g. age group 18-24, servings per day) are allowed too
@@ -212,6 +220,7 @@ def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=No
         ok, reason = validate(text, evidence_ids, summary)
         if not ok:
             return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason}). Start of reply: {text[:150]!r}"}
+        text += "\n\n*" + EVIDENCE["E12"]["text"] + "*"
         return {"ok": True, "text": text, "reason": "ok"}
     except Exception as e:
         resp_obj = getattr(e, "response", None)
