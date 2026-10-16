@@ -77,30 +77,60 @@ def _advice_ids(evidence_ids):
     return [i for i in evidence_ids if i != "E12"]
 
 
+FACTOR_ANSWER_KEYS = {
+    "Age": "age group", "HighBP": "high blood pressure (doctor told)", "HighChol": "high cholesterol (doctor told)",
+    "Smoker": "ever smoked 100+ cigarettes", "PhysActivity": "physical activity level",
+    "Fruits": "fruit servings per day", "Veggies": "vegetable servings per day",
+    "HvyAlcoholConsump": "heavy alcohol", "BMI": "BMI band", "Diabetes": "diabetes", "Stroke": "stroke history",
+    "GenHlth": "general health", "Sex": "sex", "CholCheck": "cholesterol checked in past 5 years",
+    "DiffWalk": "serious difficulty walking", "NoDocbcCost": "cost stopped a doctor visit in past year",
+}
+
+
+def _factor_lines(summary):
+    """One line per top factor: name, the person's answer (if shared), direction and strength."""
+    factors = summary["top_factors"]
+    biggest = max((abs(v) for _, v in factors), default=0) or 1
+    answers = summary.get("answers", {})
+    lines = []
+    for f, v in factors:
+        key = FACTOR_ANSWER_KEYS.get(f)
+        val = answers.get(key) if key else None
+        shown = f"your answer: {val}" if val is not None else "your answer: not shared"
+        ratio = abs(v) / biggest
+        strength = "strongest effect" if ratio >= 0.999 else ("clear effect" if ratio >= 0.4 else "small effect")
+        direction = "PUSHED the estimate UP" if v > 0 else "PULLED the estimate DOWN"
+        lines.append(f"- {FEATURE_NAMES.get(f, f)} ({shown}): {direction}, {strength}")
+    return "\n".join(lines)
+
+
 def build_prompt(summary, evidence_ids):
     evidence_ids = _advice_ids(evidence_ids)
     ev = "\n".join(f"[{i}] ({EVIDENCE[i]['source']}) {EVIDENCE[i]['text']}" for i in evidence_ids)
-    top = "\n".join(f"- {FEATURE_NAMES.get(f, f)}: {'pushed the estimate UP' if v > 0 else 'pulled the estimate DOWN'}"
-                    for f, v in summary["top_factors"])
+    top = _factor_lines(summary)
     answers = "\n".join(f"- {k}: {v}" for k, v in summary["answers"].items())
     system = (
         "You explain results from a heart-health AWARENESS tool to a member of the public in New Zealand, "
         "in simple, kind, plain English (reading age about 12). You are NOT a doctor.\n"
-        "Write exactly two short sections:\n"
-        "SECTION 1: 'Why you got this result'. 2 to 4 short bullets about the TOP FACTORS only. "
-        "Start each bullet with 'In this model,'. These come from the model, NOT from guidelines, so do NOT put any [E] tag in this section. "
-        "Say the factors are patterns in survey data, not proof of cause.\n"
-        "SECTION 2: 'What you can do'. Use ONLY the numbered EVIDENCE for advice. Every advice sentence must end with its evidence id in square brackets, e.g. [E1]. "
-        "If there is no EVIDENCE, write one line: 'No extra suggestions apply from your answers. Keep up your healthy habits.' with no tag.\n"
-        "Write each section title on its own line as '**Why you got this result**' and '**What you can do**'.\n"
+        "Write exactly four sections, each title on its own line in bold exactly as shown:\n"
+        "**What your result means** - 2 to 3 sentences. Explain that the estimate is how common heart disease was among people with similar answers in a large health survey, "
+        "what the tier (lower / moderate / higher) means, and that it is not a diagnosis or a prediction. No [E] tags here.\n"
+        "**Why you got this result** - one bullet for EACH top factor. Start each bullet with 'In this model,'. "
+        "Name the factor, say the person's answer (only if it is shown), say whether it pulled the estimate DOWN or pushed it UP, and how strong it was. "
+        "Explain in plain words: 'down' means that, compared with the average person in the survey, answers like this were linked to fewer heart-disease cases, so it lowered the estimate; 'up' means more cases, so it raised the estimate. "
+        "IMPORTANT: if a factor lowered the estimate but the answer is not a healthy habit (for example not having had a cholesterol check, or sex), say clearly this is a pattern in the data and does NOT mean the answer is healthy or protective. "
+        "Say once that these are patterns in survey data, not proof of cause. No [E] tags here.\n"
+        "**What you can do** - Use ONLY the numbered EVIDENCE for advice. Every advice sentence must end with its evidence id in square brackets, e.g. [E1]. "
+        "Link each piece of advice to the person's answers where you can. "
+        "If there is no EVIDENCE, write: 'No extra suggestions apply from your answers. Keep up your healthy habits.' with no tag.\n"
+        "**Questions to ask your GP** - 2 to 3 short, general questions the person could ask (about their result, regular check-ups, or things in their answers). No new medical facts, no [E] tags.\n"
         "RULES:\n"
-        "0. NEVER state or guess a value for the person (for example their sex, a check, a yes/no) unless it appears in PERSON'S ANSWERS. "
-        "If a factor's value is not listed, say only that the factor pulled the estimate up or down.\n"
+        "0. NEVER state or guess a value for the person unless it appears in the factor list or PERSON'S ANSWERS.\n"
         "1. Never diagnose. Never say a change will lower their risk by any amount.\n"
         "2. Never give new numbers. Only use numbers that appear in the EVIDENCE, the RESULT or the person's answers.\n"
-        "3. If something is not covered by the evidence, say 'This tool does not have guidance on that. Please ask your GP.'\n"
+        "3. Do not add health facts that are not in the EVIDENCE. If something is not covered, say 'This tool does not have guidance on that. Please ask your GP.'\n"
         "4. Be respectful and non-judgemental. Do not blame the person.\n"
-        "5. Max 220 words. Do not add a closing disclaimer (the app adds one)."
+        "5. Max 380 words. Do not add a closing disclaimer (the app adds one)."
     )
     user = (
         f"RESULT\n- Likelihood estimate: {summary['likelihood_pct']:.1f}% ({summary['tier']})\n\n"
@@ -192,7 +222,7 @@ def _call_gemini(key, model, system, user, http=None):
     body = {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600},
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1200},
     }
     r = http.post(url, headers={"x-goog-api-key": key, "Content-Type": "application/json"}, json=body, timeout=40)
     r.raise_for_status()
@@ -202,6 +232,8 @@ def _call_gemini(key, model, system, user, http=None):
 
 LABEL_FACTORS = "*Source: this tool's model (SHAP). These are patterns in survey data, not guidelines.*"
 LABEL_ADVICE = "*Source: NZ guidelines, shown after each point.*"
+LABEL_MEANING = "*Source: this tool's model and your answers.*"
+LABEL_GP = "*General questions only, not medical advice.*"
 
 
 def add_section_labels(text):
@@ -210,10 +242,15 @@ def add_section_labels(text):
     for line in text.split("\n"):
         out.append(line)
         low = line.lower()
-        if "why you got this result" in low and len(line) < 60:
-            out.append(LABEL_FACTORS)
-        elif "what you can do" in low and len(line) < 60:
-            out.append(LABEL_ADVICE)
+        if len(line) < 60:
+            if "what your result means" in low:
+                out.append(LABEL_MEANING)
+            elif "why you got this result" in low:
+                out.append(LABEL_FACTORS)
+            elif "what you can do" in low:
+                out.append(LABEL_ADVICE)
+            elif "questions to ask your gp" in low:
+                out.append(LABEL_GP)
     return "\n".join(out)
 
 
@@ -242,7 +279,7 @@ def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=No
                 client = anthropic.Anthropic(api_key=key)
             model = os.environ.get("LLM_MODEL") or _secret(secrets, "LLM_MODEL") or DEFAULT_MODEL
             resp = client.messages.create(
-                model=model, max_tokens=500, temperature=0.2,
+                model=model, max_tokens=900, temperature=0.2,
                 system=system, messages=[{"role": "user", "content": user}],
             )
             text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
