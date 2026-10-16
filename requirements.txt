@@ -7,3 +7,4 @@ shap
 matplotlib
 fpdf2
 joblib
+requests
