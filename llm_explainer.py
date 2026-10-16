@@ -92,7 +92,10 @@ def build_prompt(summary, evidence_ids):
         "Say the factors are patterns in survey data, not proof of cause.\n"
         "SECTION 2: 'What you can do'. Use ONLY the numbered EVIDENCE for advice. Every advice sentence must end with its evidence id in square brackets, e.g. [E1]. "
         "If there is no EVIDENCE, write one line: 'No extra suggestions apply from your answers. Keep up your healthy habits.' with no tag.\n"
+        "Write each section title on its own line as '**Why you got this result**' and '**What you can do**'.\n"
         "RULES:\n"
+        "0. NEVER state or guess a value for the person (for example their sex, a check, a yes/no) unless it appears in PERSON'S ANSWERS. "
+        "If a factor's value is not listed, say only that the factor pulled the estimate up or down.\n"
         "1. Never diagnose. Never say a change will lower their risk by any amount.\n"
         "2. Never give new numbers. Only use numbers that appear in the EVIDENCE, the RESULT or the person's answers.\n"
         "3. If something is not covered by the evidence, say 'This tool does not have guidance on that. Please ask your GP.'\n"
@@ -197,6 +200,23 @@ def _call_gemini(key, model, system, user, http=None):
     return "".join(p.get("text", "") for p in parts).strip()
 
 
+LABEL_FACTORS = "*Source: this tool's model (SHAP). These are patterns in survey data, not guidelines.*"
+LABEL_ADVICE = "*Source: NZ guidelines, shown after each point.*"
+
+
+def add_section_labels(text):
+    """Put a visible source label under each section title (done by the app, not the AI)."""
+    out = []
+    for line in text.split("\n"):
+        out.append(line)
+        low = line.lower()
+        if "why you got this result" in low and len(line) < 60:
+            out.append(LABEL_FACTORS)
+        elif "what you can do" in low and len(line) < 60:
+            out.append(LABEL_ADVICE)
+    return "\n".join(out)
+
+
 def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=None):
     """
     Returns {ok, text, reason}. Never raises.
@@ -229,6 +249,7 @@ def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=No
         ok, reason = validate(text, evidence_ids, summary)
         if not ok:
             return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason}). Start of reply: {text[:150]!r}"}
+        text = add_section_labels(text)
         text += "\n\n*" + EVIDENCE["E12"]["text"] + "*"
         return {"ok": True, "text": text, "reason": "ok"}
     except Exception as e:
