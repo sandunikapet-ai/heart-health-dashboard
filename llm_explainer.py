@@ -116,6 +116,8 @@ def validate(reply, evidence_ids, summary):
     for i in evidence_ids:
         allowed |= _numbers(EVIDENCE[i]["text"])
     allowed |= _numbers(f"{summary['likelihood_pct']:.1f} {summary['likelihood_pct']:.0f}")
+    # numbers from the person's own answers (e.g. age group 18-24, servings per day) are allowed too
+    allowed |= _numbers(" ".join(str(v) for v in summary.get("answers", {}).values()))
     body = re.sub(r"\[E\d+\]", "", reply)
     extra = _numbers(body) - allowed
     if extra:
