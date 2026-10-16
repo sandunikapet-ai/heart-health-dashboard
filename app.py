@@ -509,7 +509,6 @@ if st.session_state['view'] == 'form':
         fig_trend.savefig(trend_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
         fig_snap.savefig(snap_path, dpi=150, bbox_inches='tight', facecolor=BOX_BG)
 
-        # ---- Data for the optional AI explanation ----
         bmi_band = "healthy range" if 18.5 <= bmi_calculated <= 24.9 else ("below healthy range" if bmi_calculated < 18.5 else "above healthy range")
         supportive_flags = []
         if chol_check == "No": supportive_flags.append('CholCheck')
@@ -533,7 +532,6 @@ if st.session_state['view'] == 'form':
         }
         st.session_state['ai_evidence_ids'] = pick_evidence(candidate_risks, supportive_flags)
         st.session_state.pop('ai_result', None)
-
         st.session_state['risk_factors'] = risk_factors
         st.session_state['good_factors'] = good_factors
         st.session_state['candidate_risks'] = candidate_risks
@@ -621,10 +619,10 @@ elif st.session_state['view'] == 'results':
         for note in supportive_notes:
             st.write(f"- {note}")
 
-    # ---- Optional AI explanation ----
+    # ---- Optional AI explanation (guideline snippets + clearly labelled AI general knowledge) ----
     st.write("---")
     st.subheader("🤖 Deeper AI Explanation (optional)")
-    st.caption("An AI writes a plain-English explanation of your result, using only the reviewed NZ guideline snippets in this tool. "
+    st.caption("An AI writes a plain-English explanation of your result. Some points come from NZ guideline snippets in this tool, and some are general AI knowledge. "
                "It is AI-generated, can make mistakes, and is not medical advice. Your recommendations above stay the same.")
     ai_consent = st.checkbox("I agree to send a short anonymous summary of my answers (no name, income or education) to an AI service for this explanation.")
     if st.button("Explain my result in more detail", disabled=not ai_consent, key="btn_ai"):
