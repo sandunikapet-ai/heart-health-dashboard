@@ -12,7 +12,9 @@ How it stays safe (RAG = retrieval-augmented generation):
 import os
 import re
 
-DEFAULT_MODEL = "claude-sonnet-5-5"   # change in secrets: LLM_MODEL
+DEFAULT_MODEL = "claude-sonnet-5-5"   # Claude (paid). Change in secrets: LLM_MODEL
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"   # Groq (free tier). Change in secrets: GROQ_MODEL
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"   # Gemini (free tier). Change in secrets: GEMINI_MODEL
 
 # ------------------------------------------------------------------
 # EVIDENCE LIBRARY  (text taken from the app's own reviewed recommendation library)
@@ -137,30 +139,77 @@ def _get_key(secrets=None):
     return os.environ.get("ANTHROPIC_API_KEY") or _secret(secrets, "ANTHROPIC_API_KEY")
 
 
-def get_ai_explanation(summary, evidence_ids, secrets=None, client=None):
+def _get_gemini_key(secrets=None):
+    return os.environ.get("GEMINI_API_KEY") or _secret(secrets, "GEMINI_API_KEY")
+
+
+def _get_groq_key(secrets=None):
+    return os.environ.get("GROQ_API_KEY") or _secret(secrets, "GROQ_API_KEY")
+
+
+def _call_groq(key, model, system, user, http=None):
+    """Groq API (OpenAI-compatible, free tier). Plain HTTPS via requests."""
+    if http is None:
+        import requests as http
+    r = http.post("https://api.groq.com/openai/v1/chat/completions",
+                  headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                  json={"model": model, "temperature": 0.2, "max_tokens": 500,
+                        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+                  timeout=40)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
+def _call_gemini(key, model, system, user, http=None):
+    """Free Google Gemini API (AI Studio key). Uses plain HTTPS, no extra package except requests."""
+    if http is None:
+        import requests as http
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    body = {
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": user}]}],
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600},
+    }
+    r = http.post(url, headers={"x-goog-api-key": key, "Content-Type": "application/json"}, json=body, timeout=40)
+    r.raise_for_status()
+    parts = r.json()["candidates"][0]["content"]["parts"]
+    return "".join(p.get("text", "") for p in parts).strip()
+
+
+def get_ai_explanation(summary, evidence_ids, secrets=None, client=None, http=None):
     """
-    Returns dict: {ok, text, reason}. Never raises.
-    `client` can be passed in for testing (needs .messages.create).
+    Returns {ok, text, reason}. Never raises.
+    Provider order: Groq (GROQ_API_KEY), Gemini (GEMINI_API_KEY), then Claude (ANTHROPIC_API_KEY).
+    `client` / `http` can be passed in for testing.
     """
     try:
         system, user = build_prompt(summary, evidence_ids)
-        if client is None:
-            key = _get_key(secrets)
-            if not key:
-                return {"ok": False, "text": "", "reason": "AI explanation is not set up (no API key)."}
-            import anthropic
-            client = anthropic.Anthropic(api_key=key)
-        model = os.environ.get("LLM_MODEL") or _secret(secrets, "LLM_MODEL") or DEFAULT_MODEL
-        resp = client.messages.create(
-            model=model, max_tokens=500, temperature=0.2,
-            system=system, messages=[{"role": "user", "content": user}],
-        )
-        text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
+        gkey = _get_gemini_key(secrets)
+        qkey = _get_groq_key(secrets)
+        if client is None and qkey:
+            model = os.environ.get("GROQ_MODEL") or _secret(secrets, "GROQ_MODEL") or DEFAULT_GROQ_MODEL
+            text = _call_groq(qkey, model, system, user, http=http)
+        elif client is None and gkey:
+            model = os.environ.get("GEMINI_MODEL") or _secret(secrets, "GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+            text = _call_gemini(gkey, model, system, user, http=http)
+        else:
+            if client is None:
+                key = _get_key(secrets)
+                if not key:
+                    return {"ok": False, "text": "", "reason": "AI explanation is not set up (no API key)."}
+                import anthropic
+                client = anthropic.Anthropic(api_key=key)
+            model = os.environ.get("LLM_MODEL") or _secret(secrets, "LLM_MODEL") or DEFAULT_MODEL
+            resp = client.messages.create(
+                model=model, max_tokens=500, temperature=0.2,
+                system=system, messages=[{"role": "user", "content": user}],
+            )
+            text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
         ok, reason = validate(text, evidence_ids, summary)
         if not ok:
             return {"ok": False, "text": "", "reason": f"AI reply failed safety check ({reason})."}
         return {"ok": True, "text": text, "reason": "ok"}
-    except Exception as e:  # network, quota, etc.
+    except Exception as e:
         return {"ok": False, "text": "", "reason": f"AI explanation unavailable ({type(e).__name__})."}
 
 
