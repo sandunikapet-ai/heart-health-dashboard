@@ -127,9 +127,18 @@ def validate(reply, evidence_ids, summary):
     # numbers from the person's own answers (e.g. age group 18-24, servings per day) are allowed too
     allowed |= _numbers(" ".join(str(v) for v in summary.get("answers", {}).values()))
     body = re.sub(r"\[E\d+\]", "", reply)
-    extra = _numbers(body) - allowed
+    # list numbers like "1." or "2)" at the start of a line are not health figures
+    body = re.sub(r"(?m)^\s*(?:[-*]\s*)?\d+[.)]\s+", "", body)
+    # 1) Advice part (after "What you can do"): every number must come from the evidence / result / answers
+    m = re.search(r"what you can do", body, re.I)
+    advice_part = body[m.end():] if m else body
+    extra = _numbers(advice_part) - allowed
     if extra:
         return False, f"numbers not in evidence: {sorted(extra)}"
+    # 2) Whole reply: no invented percentages
+    pct_extra = {n for n in re.findall(r"(\d+(?:\.\d+)?)\s*%", body)} - allowed
+    if pct_extra:
+        return False, f"percentages not in evidence: {sorted(pct_extra)}"
     bad = re.search(r"(will|would)\s+(lower|reduce|cut)[^.]*\d+\s*%", body, re.I)
     if bad:
         return False, "promise of risk reduction"
